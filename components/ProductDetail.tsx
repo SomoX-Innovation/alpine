@@ -1,0 +1,184 @@
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useCart } from "@/context/CartContext";
+import type { Product } from "@/lib/types";
+
+type ProductDetailProps = { product: Product };
+
+export default function ProductDetail({ product }: ProductDetailProps) {
+  const [selectedSize, setSelectedSize] = useState<string>(product.sizes[0] ?? "One Size");
+  const [quantity, setQuantity] = useState(1);
+  const [added, setAdded] = useState(false);
+  const { addItem } = useCart();
+  const images = product.images.length > 0 ? product.images : [product.image];
+
+  function handleAddToCart() {
+    addItem({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      size: selectedSize,
+      quantity,
+    });
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  }
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+      <nav className="mb-6 text-sm text-[var(--muted)]" aria-label="Breadcrumb">
+        <ol className="flex flex-wrap gap-2">
+          <li>
+            <Link href="/" className="hover:text-[var(--accent)]">
+              Home
+            </Link>
+          </li>
+          <li>/</li>
+          <li>
+            <Link
+              href={product.category === "Women" ? "/women" : product.category === "Men" ? "/men" : "/new-arrivals"}
+              className="hover:text-[var(--accent)]"
+            >
+              {product.category}
+            </Link>
+          </li>
+          <li>/</li>
+          <li className="text-[var(--foreground)]">{product.name}</li>
+        </ol>
+      </nav>
+
+      <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
+        {/* Gallery */}
+        <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-[var(--muted-bg)]">
+          <Image
+            src={images[0] ?? product.image}
+            alt={product.name}
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            className="object-cover"
+          />
+          {product.badge && (
+            <span
+              className={`absolute left-4 top-4 rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-wide ${
+                product.badge === "Sale"
+                  ? "bg-[var(--foreground)] text-[var(--background)]"
+                  : "bg-[var(--gold-soft)] text-[var(--foreground)]"
+              }`}
+            >
+              {product.badge}
+            </span>
+          )}
+        </div>
+
+        {/* Info */}
+        <div>
+          <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
+            {product.category} {product.color ? `· ${product.color}` : ""}
+          </p>
+          <h1 className="font-display mt-1 text-3xl font-semibold text-[var(--foreground)] sm:text-4xl">
+            {product.name}
+          </h1>
+          <div className="mt-4 flex items-center gap-3">
+            <span className="text-xl font-semibold text-[var(--foreground)]">
+              {product.priceFormatted}
+            </span>
+            {product.compareAtPrice != null && (
+              <span className="text-base text-[var(--muted)] line-through">
+                €{product.compareAtPrice}
+              </span>
+            )}
+          </div>
+
+          <p className="mt-6 text-[var(--foreground)]/90">{product.description}</p>
+
+          {/* Size */}
+          <div className="mt-8">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold text-[var(--foreground)]">
+                Size
+              </label>
+              <Link
+                href="/size-guide"
+                className="text-sm text-[var(--accent)] hover:underline"
+              >
+                Size guide
+              </Link>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {product.sizes.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => setSelectedSize(size)}
+                  className={`min-w-[3rem] rounded-md border px-4 py-2.5 text-sm font-medium transition-colors ${
+                    selectedSize === size
+                      ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]"
+                      : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:border-[var(--accent)]"
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Quantity */}
+          <div className="mt-6">
+            <label className="text-sm font-semibold text-[var(--foreground)]">
+              Quantity
+            </label>
+            <div className="mt-2 flex w-32 items-center rounded-md border border-[var(--border)] bg-[var(--card)]">
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                className="flex h-10 w-10 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
+                aria-label="Decrease quantity"
+              >
+                −
+              </button>
+              <span className="flex-1 text-center text-sm font-medium">
+                {quantity}
+              </span>
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => q + 1)}
+                className="flex h-10 w-10 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
+                aria-label="Increase quantity"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* Add to cart */}
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className="flex-1 rounded-md bg-[var(--foreground)] px-6 py-3.5 text-sm font-semibold text-[var(--background)] transition-colors hover:bg-[var(--accent)]"
+            >
+              {added ? "Added to cart" : "Add to cart"}
+            </button>
+            <Link
+              href="/cart"
+              className="flex flex-1 items-center justify-center rounded-md border border-[var(--border)] px-6 py-3.5 text-sm font-semibold text-[var(--foreground)] hover:border-[var(--accent)] hover:bg-[var(--muted-bg)]"
+            >
+              View cart
+            </Link>
+          </div>
+
+          <ul className="mt-8 space-y-2 border-t border-[var(--border)] pt-8 text-sm text-[var(--muted)]">
+            <li>Free shipping on orders over €50</li>
+            <li>30-day easy returns</li>
+            <li>Secure payment</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
