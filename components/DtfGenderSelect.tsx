@@ -3,14 +3,17 @@
 import type { DtfGender } from "@/lib/settings-db";
 import { useState, useMemo } from "react";
 
-type Props = {
-  items: { genders: DtfGender[] }[];
-  onFilteredChange: (filtered: { genders: DtfGender[] }[]) => void;
+type Props<T extends { genders: DtfGender[] }> = {
+  items: T[];
+  onFilteredChange: (filtered: T[]) => void;
 };
 
 const GENDERS: ("All" | DtfGender)[] = ["All", "Male", "Female", "Unisex"];
 
-export function DtfGenderSelect({ items, onFilteredChange }: Props) {
+export function DtfGenderSelect<T extends { genders: DtfGender[] }>({
+  items,
+  onFilteredChange,
+}: Props<T>) {
   const [value, setValue] = useState<"All" | DtfGender>("All");
 
   const hasGender = useMemo(() => {
