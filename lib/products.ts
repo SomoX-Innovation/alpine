@@ -5,7 +5,10 @@ const defaultSizes = ["S", "M", "L", "XL", "XXL"];
 const DEFAULT_DESCRIPTION =
   "Premium apparel. Vibrant, durable design that stays soft wash after wash. Care: Wash inside out cold, tumble dry low.";
 
-const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "description" | "sizes">[] = [
+const baseProducts: Omit<
+  Product,
+  "slug" | "priceFormatted" | "images" | "description" | "sizes" | "quantity"
+>[] = [
   {
     id: "1",
     name: "Retro Wave Graphic",
@@ -190,6 +193,7 @@ function toProduct(p: (typeof baseProducts)[0]): Product {
     images: [p.image],
     description: DEFAULT_DESCRIPTION,
     sizes: defaultSizes,
+    quantity: 0,
   };
 }
 
