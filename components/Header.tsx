@@ -8,6 +8,7 @@ import { useCart } from "@/context/CartContext";
 const navLinks = [
   { href: "/women", label: "Women" },
   { href: "/men", label: "Men" },
+  { href: "/dtf", label: "DTF" },
   { href: "/new-arrivals", label: "New Designs" },
   { href: "/sale", label: "Sale" },
 ];

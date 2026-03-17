@@ -2,7 +2,6 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CollectionLayout from "@/components/CollectionLayout";
 import { getSaleProducts } from "@/lib/products-db";
-import { getSaleProducts as getStaticSaleProducts } from "@/lib/products";
 
 export const metadata = {
   title: "Sale — Alpine",
@@ -10,8 +9,7 @@ export const metadata = {
 };
 
 export default async function SalePage() {
-  let products = await getSaleProducts();
-  if (products.length === 0) products = getStaticSaleProducts();
+  const products = await getSaleProducts();
   return (
     <div className="flex min-h-screen flex-col">
       <Header />

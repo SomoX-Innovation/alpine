@@ -41,7 +41,7 @@ export default function TrackOrderForm() {
             Placed: {new Date(result.created_at).toLocaleDateString()}
           </p>
           <p className="mt-1 text-[var(--muted)]">
-            Total: €{Number(result.total).toFixed(2)}
+            Total: Rs. {Number(result.total).toFixed(2)}
           </p>
           {(result.tracking_code || result.tracking_carrier) && (
             <p className="mt-3 font-medium text-[var(--foreground)]">

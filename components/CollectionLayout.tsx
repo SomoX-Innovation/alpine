@@ -2,8 +2,7 @@
 
 import { useState, useMemo, useCallback, memo } from "react";
 import ProductCard from "@/components/ProductCard";
-import type { Product } from "@/lib/types";
-import type { ProductCategory } from "@/lib/types";
+import type { Product, ProductCategory, ProductFit } from "@/lib/types";
 
 type SortOption = "featured" | "price-asc" | "price-desc" | "newest";
 
@@ -15,12 +14,16 @@ const sortOptions: { value: SortOption; label: string }[] = [
 ];
 
 const BADGES = ["New", "Sale"] as const;
+const FIT_OPTIONS: ProductFit[] = ["Oversize", "Regular"];
 
 type FilterPanelProps = {
   showCategoryFilter: boolean;
   availableCategories: ProductCategory[];
   selectedCategories: Set<ProductCategory>;
   toggleCategory: (c: ProductCategory) => void;
+  availableFits: ProductFit[];
+  selectedFits: Set<ProductFit>;
+  toggleFit: (f: ProductFit) => void;
   priceMinMax: { min: number; max: number };
   priceMin: number;
   priceMax: number;
@@ -43,6 +46,9 @@ const FilterPanel = memo(function FilterPanel({
   availableCategories,
   selectedCategories,
   toggleCategory,
+  availableFits,
+  selectedFits,
+  toggleFit,
   priceMinMax,
   priceMin,
   priceMax,
@@ -82,12 +88,33 @@ const FilterPanel = memo(function FilterPanel({
         </div>
       )}
 
+      {(availableFits ?? []).length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--foreground)]">Fit</h3>
+          <ul className="mt-2 space-y-1.5">
+            {FIT_OPTIONS.filter((f) => (availableFits ?? []).includes(f)).map((fit) => (
+              <li key={fit}>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--muted)]">
+                  <input
+                    type="checkbox"
+                    checked={selectedFits.has(fit)}
+                    onChange={() => toggleFit(fit)}
+                    className="h-4 w-4 rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
+                  />
+                  {fit}
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div>
         <h3 className="text-sm font-semibold text-[var(--foreground)]">Price</h3>
         <p className="mt-1 text-sm text-[var(--muted)]">
           {priceRange
-            ? `€${priceMin} – €${priceMax}`
-            : `€${priceMinMax.min} – €${priceMinMax.max}`}
+            ? `Rs. ${priceMin} – Rs. ${priceMax}`
+            : `Rs. ${priceMinMax.min} – Rs. ${priceMinMax.max}`}
         </p>
         <div className="mt-3 space-y-3">
           <div className="relative h-8">
@@ -129,8 +156,8 @@ const FilterPanel = memo(function FilterPanel({
             />
           </div>
           <div className="flex justify-between text-xs text-[var(--muted)]">
-            <span>€{priceMinMax.min}</span>
-            <span>€{priceMinMax.max}</span>
+            <span>Rs. {priceMinMax.min}</span>
+            <span>Rs. {priceMinMax.max}</span>
           </div>
         </div>
       </div>
@@ -204,7 +231,7 @@ function sortProducts(products: Product[], sort: SortOption): Product[] {
 
 function getUniqueColors(products: Product[]): string[] {
   const set = new Set<string>();
-  products.forEach((p) => p.color && set.add(p.color));
+  products.forEach((p) => p.colors?.forEach((c) => set.add(c)));
   return Array.from(set).sort();
 }
 
@@ -227,6 +254,7 @@ export default function CollectionLayout({
 
   // Filter state
   const [selectedCategories, setSelectedCategories] = useState<Set<ProductCategory>>(new Set());
+  const [selectedFits, setSelectedFits] = useState<Set<ProductFit>>(new Set());
   const [selectedColors, setSelectedColors] = useState<Set<string>>(new Set());
   const [selectedBadges, setSelectedBadges] = useState<Set<string>>(new Set());
 
@@ -234,6 +262,13 @@ export default function CollectionLayout({
   const availableCategories = useMemo(() => {
     const set = new Set<ProductCategory>();
     products.forEach((p) => set.add(p.category));
+    return Array.from(set).sort();
+  }, [products]);
+  const availableFits = useMemo(() => {
+    const set = new Set<ProductFit>();
+    products.forEach((p) => {
+      if (p.fit) set.add(p.fit);
+    });
     return Array.from(set).sort();
   }, [products]);
   const priceMinMax = useMemo(() => {
@@ -258,12 +293,16 @@ export default function CollectionLayout({
       result = result.filter((p) => selectedCategories.has(p.category));
     }
 
+    if (selectedFits.size > 0) {
+      result = result.filter((p) => p.fit && selectedFits.has(p.fit));
+    }
+
     if (priceRange) {
       result = result.filter((p) => p.price >= priceRange.min && p.price <= priceRange.max);
     }
 
     if (selectedColors.size > 0) {
-      result = result.filter((p) => p.color && selectedColors.has(p.color));
+      result = result.filter((p) => p.colors?.some((c) => selectedColors.has(c)));
     }
 
     if (selectedBadges.size > 0) {
@@ -275,6 +314,7 @@ export default function CollectionLayout({
     products,
     showCategoryFilter,
     selectedCategories,
+    selectedFits,
     priceRange,
     selectedColors,
     selectedBadges,
@@ -284,12 +324,14 @@ export default function CollectionLayout({
 
   const activeFilterCount =
     (showCategoryFilter && selectedCategories.size > 0 ? 1 : 0) +
+    (selectedFits.size > 0 ? 1 : 0) +
     (priceRange ? 1 : 0) +
     (selectedColors.size > 0 ? 1 : 0) +
     (selectedBadges.size > 0 ? 1 : 0);
 
   const clearAllFilters = useCallback(() => {
     setSelectedCategories(new Set());
+    setSelectedFits(new Set());
     setPriceBarMin(null);
     setPriceBarMax(null);
     setSelectedColors(new Set());
@@ -327,6 +369,15 @@ export default function CollectionLayout({
       const next = new Set(prev);
       if (next.has(badge)) next.delete(badge);
       else next.add(badge);
+      return next;
+    });
+  }, []);
+
+  const toggleFit = useCallback((fit: ProductFit) => {
+    setSelectedFits((prev) => {
+      const next = new Set(prev);
+      if (next.has(fit)) next.delete(fit);
+      else next.add(fit);
       return next;
     });
   }, []);
@@ -392,6 +443,9 @@ export default function CollectionLayout({
               availableCategories={availableCategories}
               selectedCategories={selectedCategories}
               toggleCategory={toggleCategory}
+              availableFits={availableFits}
+              selectedFits={selectedFits}
+              toggleFit={toggleFit}
               priceMinMax={priceMinMax}
               priceMin={priceMin}
               priceMax={priceMax}
@@ -464,6 +518,9 @@ export default function CollectionLayout({
                 availableCategories={availableCategories}
                 selectedCategories={selectedCategories}
                 toggleCategory={toggleCategory}
+                availableFits={availableFits}
+                selectedFits={selectedFits}
+                toggleFit={toggleFit}
                 priceMinMax={priceMinMax}
                 priceMin={priceMin}
                 priceMax={priceMax}

@@ -4,15 +4,18 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
+import { CURRENCY } from "@/lib/currency";
 import type { Product } from "@/lib/types";
 
 type ProductDetailProps = { product: Product };
 
 export default function ProductDetail({ product }: ProductDetailProps) {
   const [selectedSize, setSelectedSize] = useState<string>(product.sizes[0] ?? "One Size");
-  const [quantity, setQuantity] = useState(1);
+  const maxQty = typeof product.quantity === "number" ? product.quantity : 999;
+  const [quantity, setQuantity] = useState(Math.min(1, maxQty));
   const [added, setAdded] = useState(false);
   const { addItem } = useCart();
+  const outOfStock = maxQty === 0;
   const images = product.images.length > 0 ? product.images : [product.image];
 
   function handleAddToCart() {
@@ -29,7 +32,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+    <div suppressHydrationWarning className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
       <nav className="mb-6 text-sm text-[var(--muted)]" aria-label="Breadcrumb">
         <ol className="flex flex-wrap gap-2">
           <li>
@@ -64,11 +67,10 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           />
           {product.badge && (
             <span
-              className={`absolute left-4 top-4 rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-wide ${
-                product.badge === "Sale"
-                  ? "bg-[var(--foreground)] text-[var(--background)]"
-                  : "bg-[var(--gold-soft)] text-[var(--foreground)]"
-              }`}
+              className={`absolute left-4 top-4 rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-wide ${product.badge === "Sale"
+                ? "bg-[var(--foreground)] text-[var(--background)]"
+                : "bg-[var(--gold-soft)] text-[var(--foreground)]"
+                }`}
             >
               {product.badge}
             </span>
@@ -78,7 +80,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
         {/* Info */}
         <div>
           <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
-            {product.category} {product.color ? `· ${product.color}` : ""}
+            {product.category} {product.colors && product.colors.length > 0 ? `· ${product.colors.join(", ")}` : ""}
           </p>
           <h1 className="font-display mt-1 text-3xl font-semibold text-[var(--foreground)] sm:text-4xl">
             {product.name}
@@ -89,10 +91,20 @@ export default function ProductDetail({ product }: ProductDetailProps) {
             </span>
             {product.compareAtPrice != null && (
               <span className="text-base text-[var(--muted)] line-through">
-                €{product.compareAtPrice}
+                Rs.{product.compareAtPrice}
               </span>
             )}
           </div>
+
+          {typeof product.quantity === "number" && (
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              {product.quantity === 0 ? (
+                <span className="text-red-500 font-medium">Out of stock</span>
+              ) : (
+                <span>{product.quantity} in stock</span>
+              )}
+            </p>
+          )}
 
           <p className="mt-6 text-[var(--foreground)]/90">{product.description}</p>
 
@@ -115,11 +127,10 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                   key={size}
                   type="button"
                   onClick={() => setSelectedSize(size)}
-                  className={`min-w-[3rem] rounded-md border px-4 py-2.5 text-sm font-medium transition-colors ${
-                    selectedSize === size
-                      ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]"
-                      : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:border-[var(--accent)]"
-                  }`}
+                  className={`min-w-[3rem] rounded-md border px-4 py-2.5 text-sm font-medium transition-colors ${selectedSize === size
+                    ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]"
+                    : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:border-[var(--accent)]"
+                    }`}
                 >
                   {size}
                 </button>
@@ -128,41 +139,44 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           </div>
 
           {/* Quantity */}
-          <div className="mt-6">
-            <label className="text-sm font-semibold text-[var(--foreground)]">
-              Quantity
-            </label>
-            <div className="mt-2 flex w-32 items-center rounded-md border border-[var(--border)] bg-[var(--card)]">
-              <button
-                type="button"
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                className="flex h-10 w-10 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
-                aria-label="Decrease quantity"
-              >
-                −
-              </button>
-              <span className="flex-1 text-center text-sm font-medium">
-                {quantity}
-              </span>
-              <button
-                type="button"
-                onClick={() => setQuantity((q) => q + 1)}
-                className="flex h-10 w-10 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
-                aria-label="Increase quantity"
-              >
-                +
-              </button>
+          {!outOfStock && (
+            <div className="mt-6">
+              <label className="text-sm font-semibold text-[var(--foreground)]">
+                Quantity
+              </label>
+              <div className="mt-2 flex w-32 items-center rounded-md border border-[var(--border)] bg-[var(--card)]">
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  className="flex h-10 w-10 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
+                  aria-label="Decrease quantity"
+                >
+                  −
+                </button>
+                <span className="flex-1 text-center text-sm font-medium">
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
+                  className="flex h-10 w-10 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
+                  aria-label="Increase quantity"
+                >
+                  +
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Add to cart */}
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <button
               type="button"
               onClick={handleAddToCart}
-              className="flex-1 rounded-md bg-[var(--foreground)] px-6 py-3.5 text-sm font-semibold text-[var(--background)] transition-colors hover:bg-[var(--accent)]"
+              disabled={outOfStock}
+              className="flex-1 rounded-md bg-[var(--foreground)] px-6 py-3.5 text-sm font-semibold text-[var(--background)] transition-colors hover:bg-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {added ? "Added to cart" : "Add to cart"}
+              {outOfStock ? "Out of stock" : added ? "Added to cart" : "Add to cart"}
             </button>
             <Link
               href="/cart"
@@ -173,7 +187,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           </div>
 
           <ul className="mt-8 space-y-2 border-t border-[var(--border)] pt-8 text-sm text-[var(--muted)]">
-            <li>Free shipping on orders over €50</li>
+            <li>Free shipping on orders over {CURRENCY.symbol} {CURRENCY.freeShippingThreshold.toLocaleString()}</li>
             <li>30-day easy returns</li>
             <li>Secure payment</li>
           </ul>

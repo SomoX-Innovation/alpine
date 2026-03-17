@@ -3,11 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
+import { CURRENCY } from "@/lib/currency";
 
 export default function CartContent() {
   const { items, removeItem, updateQuantity } = useCart();
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const shipping = subtotal >= 50 ? 0 : 5.9;
+  const shipping = subtotal >= CURRENCY.freeShippingThreshold ? 0 : CURRENCY.shippingCost;
   const total = subtotal + shipping;
 
   if (items.length === 0) {
@@ -62,7 +63,7 @@ export default function CartContent() {
                   {item.name}
                 </Link>
                 <p className="mt-0.5 text-sm text-[var(--muted)]">
-                  Size: {item.size} · €{item.price}
+                  Size: {item.size} · Rs. {item.price}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex items-center rounded border border-[var(--border)]">
@@ -98,7 +99,7 @@ export default function CartContent() {
                 </div>
               </div>
               <div className="text-right font-medium text-[var(--foreground)]">
-                €{(item.price * item.quantity).toFixed(2)}
+                Rs. {(item.price * item.quantity).toFixed(2)}
               </div>
             </li>
           ))}
@@ -112,7 +113,7 @@ export default function CartContent() {
             <dl className="mt-4 space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-[var(--muted)]">Subtotal</dt>
-                <dd className="font-medium">€{subtotal.toFixed(2)}</dd>
+                <dd className="font-medium">Rs. {subtotal.toFixed(2)}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-[var(--muted)]">Shipping</dt>
@@ -120,19 +121,19 @@ export default function CartContent() {
                   {shipping === 0 ? (
                     <span className="text-[var(--accent)]">Free</span>
                   ) : (
-                    `€${shipping.toFixed(2)}`
+                    `Rs. ${shipping.toFixed(2)}`
                   )}
                 </dd>
               </div>
             </dl>
-            {subtotal < 50 && (
+            {subtotal < CURRENCY.freeShippingThreshold && (
               <p className="mt-2 text-xs text-[var(--muted)]">
-                Add €{(50 - subtotal).toFixed(2)} more for free shipping
+                Add Rs. {(CURRENCY.freeShippingThreshold - subtotal).toFixed(2)} more for free shipping
               </p>
             )}
             <div className="mt-4 flex justify-between border-t border-[var(--border)] pt-4 text-base font-semibold">
               <dt>Total</dt>
-              <dd>€{total.toFixed(2)}</dd>
+              <dd>Rs. {total.toFixed(2)}</dd>
             </div>
             <Link
               href="/checkout"

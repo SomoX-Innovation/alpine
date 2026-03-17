@@ -2,14 +2,13 @@ import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { getProductById } from "@/lib/products-db";
-import { getProductById as getStaticProductById } from "@/lib/products";
 import ProductDetail from "@/components/ProductDetail";
 
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props) {
   const { id } = await params;
-  const product = await getProductById(id) ?? getStaticProductById(id);
+  const product = await getProductById(id);
   if (!product) return { title: "Product — Alpine" };
   return {
     title: `${product.name} — Alpine`,
@@ -19,8 +18,7 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function ProductPage({ params }: Props) {
   const { id } = await params;
-  const fromDb = await getProductById(id);
-  const product = fromDb ?? getStaticProductById(id) ?? null;
+  const product = await getProductById(id);
   if (!product) notFound();
 
   return (

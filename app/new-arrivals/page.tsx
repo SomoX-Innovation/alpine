@@ -2,7 +2,6 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CollectionLayout from "@/components/CollectionLayout";
 import { getNewArrivals } from "@/lib/products-db";
-import { getNewArrivals as getStaticNewArrivals } from "@/lib/products";
 
 export const metadata = {
   title: "New Designs — Alpine",
@@ -10,8 +9,7 @@ export const metadata = {
 };
 
 export default async function NewArrivalsPage() {
-  let products = await getNewArrivals();
-  if (products.length === 0) products = getStaticNewArrivals();
+  const products = await getNewArrivals();
   return (
     <div className="flex min-h-screen flex-col">
       <Header />

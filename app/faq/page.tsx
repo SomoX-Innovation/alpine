@@ -1,13 +1,16 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FaqContent from "@/components/FaqContent";
+import { getFaqData } from "@/lib/settings-db";
 
 export const metadata = {
   title: "FAQ — Alpine",
   description: "Frequently asked questions.",
 };
 
-export default function FaqPage() {
+export default async function FaqPage() {
+  const faqs = await getFaqData();
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
@@ -16,7 +19,7 @@ export default function FaqPage() {
           <h1 className="font-display text-3xl font-semibold text-[var(--foreground)]">
             Frequently asked questions
           </h1>
-          <FaqContent />
+          <FaqContent initialFaqs={faqs} />
         </div>
       </main>
       <Footer />

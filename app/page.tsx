@@ -4,17 +4,20 @@ import Hero from "@/components/Hero";
 import CategoryGrid from "@/components/CategoryGrid";
 import ProductCard from "@/components/ProductCard";
 import { getFeaturedProducts } from "@/lib/products-db";
-import { featuredProducts } from "@/lib/products";
+import { getHeroImage } from "@/lib/settings-db";
+import { CURRENCY } from "@/lib/currency";
 import Link from "next/link";
 
 export default async function Home() {
-  let featured = await getFeaturedProducts();
-  if (featured.length === 0) featured = featuredProducts;
+  const featured = await getFeaturedProducts();
+
+  const heroImageSrc = await getHeroImage();
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <Hero />
+        <Hero heroImageSrc={heroImageSrc} />
         <CategoryGrid />
 
         {/* Featured products */}
@@ -47,7 +50,7 @@ export default async function Home() {
           <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
             <div className="flex flex-col items-center text-center">
               <h2 className="font-display text-2xl font-semibold text-[var(--foreground)] sm:text-3xl">
-                Free shipping on orders over €50
+                Free shipping on orders over {CURRENCY.symbol} {CURRENCY.freeShippingThreshold.toLocaleString()}
               </h2>
               <p className="mt-2 text-[var(--muted)]">
                 DTF prints that last. Easy returns within 30 days.

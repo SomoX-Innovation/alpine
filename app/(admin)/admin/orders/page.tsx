@@ -64,7 +64,7 @@ export default async function AdminOrdersPage() {
                     {order.customer_email}
                   </td>
                   <td className="px-4 py-3 text-[var(--foreground)]">
-                    €{Number(order.total).toFixed(2)}
+                    Rs. {Number(order.total).toFixed(2)}
                   </td>
                   <td className="px-4 py-3 text-[var(--muted)]">
                     {order.status}

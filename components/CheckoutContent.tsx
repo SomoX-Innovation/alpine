@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { createOrder } from "@/app/actions/orders";
+import { CURRENCY } from "@/lib/currency";
 
 export default function CheckoutContent() {
   const { items, clearCart } = useCart();
@@ -23,7 +24,7 @@ export default function CheckoutContent() {
   });
 
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const shipping = subtotal >= 50 ? 0 : 5.9;
+  const shipping = subtotal >= CURRENCY.freeShippingThreshold ? 0 : CURRENCY.shippingCost;
   const total = subtotal + shipping;
 
   if (items.length === 0 && !placed) {
@@ -318,7 +319,7 @@ export default function CheckoutContent() {
                 type="submit"
                 className="w-full rounded-md bg-[var(--foreground)] py-3 text-sm font-semibold text-[var(--background)] hover:bg-[var(--accent)]"
               >
-                Place order · €{total.toFixed(2)}
+                Place order · Rs. {total.toFixed(2)}
               </button>
             </form>
           )}
@@ -353,7 +354,7 @@ export default function CheckoutContent() {
                     </p>
                   </div>
                   <p className="text-sm font-medium">
-                    €{(item.price * item.quantity).toFixed(2)}
+                    Rs. {(item.price * item.quantity).toFixed(2)}
                   </p>
                 </li>
               ))}
@@ -361,16 +362,16 @@ export default function CheckoutContent() {
             <dl className="mt-4 space-y-2 border-t border-[var(--border)] pt-4 text-sm">
               <div className="flex justify-between">
                 <dt className="text-[var(--muted)]">Subtotal</dt>
-                <dd>€{subtotal.toFixed(2)}</dd>
+                <dd>Rs. {subtotal.toFixed(2)}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-[var(--muted)]">Shipping</dt>
-                <dd>{shipping === 0 ? "Free" : `€${shipping.toFixed(2)}`}</dd>
+                <dd>{shipping === 0 ? "Free" : `Rs. ${shipping.toFixed(2)}`}</dd>
               </div>
             </dl>
             <div className="mt-2 flex justify-between font-semibold">
               <dt>Total</dt>
-              <dd>€{total.toFixed(2)}</dd>
+              <dd>Rs. {total.toFixed(2)}</dd>
             </div>
           </div>
         </div>

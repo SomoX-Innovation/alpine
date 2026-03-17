@@ -42,9 +42,13 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
   const compareAtPrice = compareAtPriceRaw ? Number(compareAtPriceRaw) : null;
   const category = (formData.get("category") as string) || "Unisex";
   const badge = (formData.get("badge") as string) || null;
-  const color = (formData.get("color") as string)?.trim() || null;
+  const fitRaw = (formData.get("fit") as string)?.trim() || null;
+  const fit = fitRaw === "Oversize" || fitRaw === "Regular" ? fitRaw : null;
+  const item_code = (formData.get("item_code") as string)?.trim() || null;
+  const colors = formData.getAll("colors").map((c) => String(c).trim()).filter(Boolean);
   const sizesStr = (formData.get("sizes") as string)?.trim() || "S,M,L,XL,XXL";
   const sizes = sizesStr.split(",").map((s) => s.trim()).filter(Boolean);
+  const quantity = Math.max(0, Math.floor(Number(formData.get("quantity")) || 0));
   const image = (formData.get("image") as string)?.trim() || "";
   const published = formData.get("published") === "on" || formData.get("published") === "true";
 
@@ -60,10 +64,13 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
       description,
       price,
       compare_at_price: compareAtPrice,
-      category: category as "Women" | "Men" | "Unisex",
+      category: category as "Women" | "Men" | "Unisex" | "DTF",
       badge: badge === "New" || badge === "Sale" ? badge : null,
-      color,
+      fit,
+      item_code,
+      colors,
       sizes,
+      quantity,
       image: image || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
       images: image ? [image] : [],
       published,
@@ -75,6 +82,7 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
     return { error: error.message };
   }
   revalidatePath("/admin/products");
+  revalidatePath("/admin/dtf");
   revalidatePath("/admin");
   revalidatePath("/");
   return { id: data.id };
@@ -96,9 +104,13 @@ export async function updateProduct(
   const compareAtPrice = compareAtPriceRaw ? Number(compareAtPriceRaw) : null;
   const category = (formData.get("category") as string) || "Unisex";
   const badge = (formData.get("badge") as string) || null;
-  const color = (formData.get("color") as string)?.trim() || null;
+  const fitRaw = (formData.get("fit") as string)?.trim() || null;
+  const fit = fitRaw === "Oversize" || fitRaw === "Regular" ? fitRaw : null;
+  const item_code = (formData.get("item_code") as string)?.trim() || null;
+  const colors = formData.getAll("colors").map((c) => String(c).trim()).filter(Boolean);
   const sizesStr = (formData.get("sizes") as string)?.trim() || "S,M,L,XL,XXL";
   const sizes = sizesStr.split(",").map((s) => s.trim()).filter(Boolean);
+  const quantity = Math.max(0, Math.floor(Number(formData.get("quantity")) || 0));
   const image = (formData.get("image") as string)?.trim() || "";
   const published = formData.get("published") === "on" || formData.get("published") === "true";
 
@@ -110,10 +122,13 @@ export async function updateProduct(
       description,
       price,
       compare_at_price: compareAtPrice,
-      category: category as "Women" | "Men" | "Unisex",
+      category: category as "Women" | "Men" | "Unisex" | "DTF",
       badge: badge === "New" || badge === "Sale" ? badge : null,
-      color,
+      fit,
+      item_code,
+      colors,
       sizes,
+      quantity,
       image: image || undefined,
       images: image ? [image] : [],
       published,
@@ -126,6 +141,7 @@ export async function updateProduct(
   }
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${id}/edit`);
+  revalidatePath("/admin/dtf");
   revalidatePath("/admin");
   revalidatePath("/");
   return {};
@@ -141,6 +157,7 @@ export async function deleteProduct(id: string): Promise<{ error?: string }> {
     return { error: error.message };
   }
   revalidatePath("/admin/products");
+  revalidatePath("/admin/dtf");
   revalidatePath("/admin");
   revalidatePath("/");
   return {};

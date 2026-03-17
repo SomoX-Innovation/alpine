@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase";
-import { getSessionEmail } from "@/lib/auth";
+import { createClient } from "@/lib/supabase-server";
 
 export default async function AdminDashboardPage() {
-  const email = await getSessionEmail();
-  const supabase = createServerClient();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const email = user?.email ?? "Admin";
+
   let productCount = 0;
   let orderCount = 0;
   let ordersToday = 0;
@@ -119,7 +120,7 @@ export default async function AdminDashboardPage() {
                       {new Date(order.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 text-[var(--foreground)]">
-                      €{Number(order.total).toFixed(2)}
+                      Rs. {Number(order.total).toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-[var(--muted)]">
                       {order.status}

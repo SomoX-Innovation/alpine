@@ -1,24 +1,30 @@
-"use server";
+"use server"
 
-import { redirect } from "next/navigation";
-import { createSession, destroySession } from "@/lib/auth";
+import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase-server"
 
 export async function login(formData: FormData) {
-  const email = (formData.get("email") as string)?.trim() ?? "";
-  const password = formData.get("password") as string ?? "";
-  const adminEmail = process.env.ADMIN_EMAIL;
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminEmail || !adminPassword) {
-    return { error: "Admin login not configured." };
+  const email = formData.get("email") as string
+  const password = formData.get("password") as string
+  const supabase = await createClient()
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+
+  if (error) {
+    return { error: error.message }
   }
-  if (email !== adminEmail || password !== adminPassword) {
-    return { error: "Invalid email or password." };
-  }
-  await createSession(email);
-  redirect("/admin");
+
+  revalidatePath("/", "layout")
+  redirect("/admin")
 }
 
 export async function logout() {
-  await destroySession();
-  redirect("/admin/login");
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  redirect("/admin/login")
 }
+

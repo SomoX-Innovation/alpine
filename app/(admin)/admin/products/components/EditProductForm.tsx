@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { updateProduct, deleteProduct, uploadProductImage } from "../../actions/products";
 import type { ProductRow } from "@/lib/products-db";
+import type { CategoryRow } from "@/lib/categories-db";
+import type { ColorRow } from "@/lib/colors-db";
 
-export default function EditProductForm({ product }: { product: ProductRow }) {
+export default function EditProductForm({ product, categories = [], colors = [] }: { product: ProductRow, categories: CategoryRow[], colors: ColorRow[] }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState(product.image);
@@ -102,6 +104,18 @@ export default function EditProductForm({ product }: { product: ProductRow }) {
 
         <div>
           <label className="block text-sm font-medium text-[var(--foreground)]">
+            Item Code (optional)
+          </label>
+          <input
+            name="item_code"
+            type="text"
+            defaultValue={product.item_code ?? ""}
+            className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[var(--foreground)]">
             Description
           </label>
           <textarea
@@ -115,7 +129,7 @@ export default function EditProductForm({ product }: { product: ProductRow }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-[var(--foreground)]">
-              Price (€) *
+              Price (Rs.) *
             </label>
             <input
               name="price"
@@ -129,7 +143,7 @@ export default function EditProductForm({ product }: { product: ProductRow }) {
           </div>
           <div>
             <label className="block text-sm font-medium text-[var(--foreground)]">
-              Compare at price (€)
+              Compare at price (Rs.)
             </label>
             <input
               name="compare_at_price"
@@ -152,9 +166,11 @@ export default function EditProductForm({ product }: { product: ProductRow }) {
               defaultValue={product.category}
               className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             >
-              <option value="Women">Women</option>
-              <option value="Men">Men</option>
-              <option value="Unisex">Unisex</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.name}
+                </option>
+              ))}
             </select>
           </div>
           <div>
@@ -171,18 +187,40 @@ export default function EditProductForm({ product }: { product: ProductRow }) {
               <option value="Sale">Sale</option>
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--foreground)]">
+              Fit (for filtering only)
+            </label>
+            <select
+              name="fit"
+              defaultValue={product.fit ?? ""}
+              className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            >
+              <option value="">—</option>
+              <option value="Oversize">Oversize</option>
+              <option value="Regular">Regular</option>
+            </select>
+          </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[var(--foreground)]">
-            Color
+          <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+            Colors
           </label>
-          <input
-            name="color"
-            type="text"
-            defaultValue={product.color ?? ""}
-            className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-          />
+          <div className="flex flex-wrap gap-4">
+            {colors.map((c) => (
+              <label key={c.id} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="colors"
+                  value={c.name}
+                  defaultChecked={product.colors?.includes(c.name)}
+                  className="rounded border-[var(--border)]"
+                />
+                <span className="text-sm text-[var(--foreground)]">{c.name}</span>
+              </label>
+            ))}
+          </div>
         </div>
 
         <div>
@@ -193,6 +231,19 @@ export default function EditProductForm({ product }: { product: ProductRow }) {
             name="sizes"
             type="text"
             defaultValue={Array.isArray(product.sizes) ? product.sizes.join(", ") : "S,M,L,XL,XXL"}
+            className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[var(--foreground)]">
+            Quantity (stock)
+          </label>
+          <input
+            name="quantity"
+            type="number"
+            min="0"
+            defaultValue={product.quantity ?? 0}
             className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
           />
         </div>

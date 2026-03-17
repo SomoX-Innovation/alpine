@@ -23,11 +23,10 @@ export default function ProductCard({ product }: ProductCardProps) {
         />
         {product.badge && (
           <span
-            className={`absolute left-3 top-3 rounded px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${
-              product.badge === "Sale"
+            className={`absolute left-3 top-3 rounded px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${product.badge === "Sale"
                 ? "bg-[var(--foreground)] text-[var(--background)]"
                 : "bg-[var(--gold-soft)] text-[var(--foreground)]"
-            }`}
+              }`}
           >
             {product.badge}
           </span>
@@ -41,7 +40,10 @@ export default function ProductCard({ product }: ProductCardProps) {
       <div className="mt-3 flex flex-col gap-0.5">
         <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
           {product.category}
-          {product.color ? ` · ${product.color}` : ""}
+          {product.colors && product.colors.length > 0 ? ` · ${product.colors.join(", ")}` : ""}
+          <span className={product.quantity === 0 ? "text-red-500" : ""}>
+            {" "}· {product.quantity === 0 ? "Out of stock" : `${product.quantity} in stock`}
+          </span>
         </p>
         <h3 className="font-display text-lg font-medium text-[var(--foreground)] group-hover:text-[var(--accent)]">
           {product.name}
@@ -52,7 +54,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </span>
           {product.compareAtPrice != null && (
             <span className="text-xs text-[var(--muted)] line-through">
-              €{product.compareAtPrice}
+              Rs.{product.compareAtPrice}
             </span>
           )}
         </div>

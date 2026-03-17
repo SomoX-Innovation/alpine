@@ -1,4 +1,5 @@
 import type { Product } from "@/lib/types";
+import { CURRENCY } from "@/lib/currency";
 
 const defaultSizes = ["S", "M", "L", "XL", "XXL"];
 const DEFAULT_DESCRIPTION =
@@ -12,7 +13,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     category: "Unisex",
     image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
     badge: "New",
-    color: "Black",
+    colors: ["Black"],
   },
   {
     id: "2",
@@ -20,7 +21,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     price: 32,
     category: "Unisex",
     image: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=600&q=80",
-    color: "White",
+    colors: ["White"],
   },
   {
     id: "3",
@@ -30,7 +31,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     category: "Men",
     image: "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&q=80",
     badge: "Sale",
-    color: "Heather Grey",
+    colors: ["Heather Grey"],
   },
   {
     id: "4",
@@ -38,7 +39,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     price: 28,
     category: "Men",
     image: "https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=600&q=80",
-    color: "Navy",
+    colors: ["Navy"],
   },
   {
     id: "5",
@@ -47,7 +48,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     category: "Unisex",
     image: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=600&q=80",
     badge: "New",
-    color: "Black",
+    colors: ["Black"],
   },
   {
     id: "6",
@@ -55,7 +56,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     price: 35,
     category: "Unisex",
     image: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=600&q=80",
-    color: "White",
+    colors: ["White"],
   },
   {
     id: "7",
@@ -64,7 +65,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     category: "Women",
     image: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&q=80",
     badge: "New",
-    color: "Off-White",
+    colors: ["Off-White"],
   },
   {
     id: "8",
@@ -72,7 +73,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     price: 30,
     category: "Women",
     image: "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=600&q=80",
-    color: "Dusty Pink",
+    colors: ["Dusty Pink"],
   },
   {
     id: "9",
@@ -82,7 +83,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     category: "Unisex",
     image: "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&q=80",
     badge: "Sale",
-    color: "Black",
+    colors: ["Black"],
   },
   {
     id: "10",
@@ -90,7 +91,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     price: 29,
     category: "Unisex",
     image: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=600&q=80",
-    color: "White",
+    colors: ["White"],
   },
   {
     id: "11",
@@ -99,7 +100,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     category: "Men",
     image: "https://images.unsplash.com/photo-1617137968427-85924c800a22?w=600&q=80",
     badge: "New",
-    color: "Black",
+    colors: ["Black"],
   },
   {
     id: "12",
@@ -107,7 +108,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     price: 36,
     category: "Men",
     image: "https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=600&q=80",
-    color: "Charcoal",
+    colors: ["Charcoal"],
   },
   {
     id: "13",
@@ -115,7 +116,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     price: 31,
     category: "Women",
     image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600&q=80",
-    color: "White",
+    colors: ["White"],
   },
   {
     id: "14",
@@ -123,7 +124,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     price: 31,
     category: "Women",
     image: "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=600&q=80",
-    color: "Lavender",
+    colors: ["Lavender"],
   },
   {
     id: "15",
@@ -132,7 +133,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     category: "Unisex",
     image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
     badge: "New",
-    color: "Black",
+    colors: ["Black"],
   },
   {
     id: "16",
@@ -140,7 +141,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     price: 33,
     category: "Unisex",
     image: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=600&q=80",
-    color: "White",
+    colors: ["White"],
   },
   {
     id: "17",
@@ -148,7 +149,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     price: 34,
     category: "Men",
     image: "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&q=80",
-    color: "Heather Grey",
+    colors: ["Heather Grey"],
   },
   {
     id: "18",
@@ -156,7 +157,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     price: 34,
     category: "Men",
     image: "https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=600&q=80",
-    color: "Navy",
+    colors: ["Navy"],
   },
   {
     id: "19",
@@ -166,7 +167,7 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     category: "Unisex",
     image: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=600&q=80",
     badge: "Sale",
-    color: "White",
+    colors: ["White"],
   },
   {
     id: "20",
@@ -174,18 +175,18 @@ const baseProducts: Omit<Product, "slug" | "priceFormatted" | "images" | "descri
     price: 30,
     category: "Unisex",
     image: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=600&q=80",
-    color: "Black",
+    colors: ["Black"],
   },
 ];
 
 function toProduct(p: (typeof baseProducts)[0]): Product {
   const slug =
     p.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") +
-    (p.color ? `-${p.color.toLowerCase().replace(/\s+/g, "-")}` : "");
+    (p.colors && p.colors.length > 0 ? `-${p.colors.join("-").toLowerCase().replace(/\s+/g, "-")}` : "");
   return {
     ...p,
     slug,
-    priceFormatted: `€${p.price}`,
+    priceFormatted: CURRENCY.format(p.price),
     images: [p.image],
     description: DEFAULT_DESCRIPTION,
     sizes: defaultSizes,
@@ -226,6 +227,6 @@ export function searchProducts(query: string): Product[] {
     (p) =>
       p.name.toLowerCase().includes(q) ||
       p.category.toLowerCase().includes(q) ||
-      (p.color && p.color.toLowerCase().includes(q))
+      (p.colors && p.colors.some((c) => c.toLowerCase().includes(q)))
   );
 }

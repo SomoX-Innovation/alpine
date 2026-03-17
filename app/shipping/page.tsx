@@ -22,7 +22,7 @@ export default function ShippingPage() {
               Shipping
             </h2>
             <ul className="mt-4 space-y-2 text-[var(--foreground)]/90">
-              <li>• Free standard shipping on orders over €50.</li>
+              <li>• Free standard shipping on orders over Rs. 5,000.</li>
               <li>• Standard delivery: 3–5 business days (EU).</li>
               <li>• Express options available at checkout.</li>
               <li>• We ship to EU addresses only at this time.</li>

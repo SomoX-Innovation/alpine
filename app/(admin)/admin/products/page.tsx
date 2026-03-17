@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getAllProducts } from "@/lib/products-db";
 
 export default async function AdminProductsPage() {
@@ -27,14 +28,23 @@ export default async function AdminProductsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--muted-bg)]">
+                <th className="px-4 py-3 text-left font-medium text-[var(--foreground)] w-16">
+                  Image
+                </th>
                 <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
                   Name
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
+                  Item Code
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
                   Category
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
                   Price
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
+                  Qty
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
                   Badge
@@ -53,12 +63,21 @@ export default async function AdminProductsPage() {
                   key={p.id}
                   className="border-b border-[var(--border)] last:border-0"
                 >
+                  <td className="px-4 py-3">
+                    <div className="relative h-10 w-10 overflow-hidden rounded bg-[var(--muted-bg)]">
+                      <Image src={p.image} alt={p.name} fill className="object-cover" />
+                    </div>
+                  </td>
                   <td className="px-4 py-3 font-medium text-[var(--foreground)]">
                     {p.name}
                   </td>
+                  <td className="px-4 py-3 text-[var(--muted)]">{p.item_code ?? "—"}</td>
                   <td className="px-4 py-3 text-[var(--muted)]">{p.category}</td>
                   <td className="px-4 py-3 text-[var(--foreground)]">
-                    €{Number(p.price).toFixed(2)}
+                    Rs. {Number(p.price).toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-[var(--muted)]">
+                    {p.quantity ?? 0}
                   </td>
                   <td className="px-4 py-3 text-[var(--muted)]">
                     {p.badge ?? "—"}

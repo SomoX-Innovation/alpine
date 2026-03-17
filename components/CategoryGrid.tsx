@@ -15,6 +15,12 @@ const categories = [
     image: "https://images.unsplash.com/photo-1617137968427-85924c800a22?w=800&q=80",
   },
   {
+    href: "/dtf",
+    label: "DTF",
+    description: "Direct to Film prints",
+    image: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=800&q=80",
+  },
+  {
     href: "/new-arrivals",
     label: "New Designs",
     description: "Latest drops",
@@ -33,7 +39,7 @@ export default function CategoryGrid() {
           Apparel in every style
         </p>
       </div>
-      <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {categories.map((cat) => (
           <Link
             key={cat.href}

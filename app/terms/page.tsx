@@ -35,7 +35,7 @@ export default function TermsPage() {
               </h2>
               <p className="mt-2">
                 Orders are subject to availability. We reserve the right to
-                refuse or cancel orders. Prices are in EUR and include VAT where
+                refuse or cancel orders. Prices are in LKR (Sri Lankan Rupees) and include VAT where
                 applicable. Payment is due at checkout.
               </p>
             </section>

@@ -1,4 +1,7 @@
-export type ProductCategory = "Women" | "Men" | "Unisex";
+export type ProductCategory = "Women" | "Men" | "Unisex" | "DTF";
+
+/** Filter-only (not in nav): Oversize, Regular */
+export type ProductFit = "Oversize" | "Regular";
 
 export type Product = {
   id: string;
@@ -11,10 +14,15 @@ export type Product = {
   image: string;
   images: string[];
   badge?: "New" | "Sale";
+  /** Filter-only category: Oversize or Regular */
+  fit?: ProductFit;
   description: string;
+  itemCode?: string;
   sizes: string[];
-  /** Color / shade, e.g. Black, White, Heather Grey */
-  color?: string;
+  /** Colors / shades, e.g. ["Black", "White", "Heather Grey"] */
+  colors: string[];
+  /** Stock quantity (0 = out of stock) */
+  quantity: number;
 };
 
 export type CartItem = {

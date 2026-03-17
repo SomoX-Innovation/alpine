@@ -3,7 +3,6 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SearchContent from "@/components/SearchContent";
 import { searchProducts } from "@/lib/products-db";
-import { searchProducts as searchStatic } from "@/lib/products";
 
 export const metadata = {
   title: "Search — Alpine",
@@ -16,8 +15,7 @@ export default async function SearchPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q = "" } = await searchParams;
-  let results = await searchProducts(q);
-  if (results.length === 0 && q.trim()) results = searchStatic(q);
+  const results = await searchProducts(q);
   return (
     <div className="flex min-h-screen flex-col">
       <Header />

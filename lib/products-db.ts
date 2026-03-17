@@ -1,5 +1,6 @@
-import type { Product, ProductCategory } from "@/lib/types";
+import type { Product, ProductCategory, ProductFit } from "@/lib/types";
 import { createServerClient } from "@/lib/supabase";
+import { CURRENCY } from "@/lib/currency";
 
 export type ProductRow = {
   id: string;
@@ -10,8 +11,11 @@ export type ProductRow = {
   compare_at_price: number | null;
   category: string;
   badge: string | null;
-  color: string | null;
+  fit: string | null;
+  item_code: string | null;
+  colors: string[];
   sizes: string[];
+  quantity: number;
   image: string;
   images: string[];
   published: boolean;
@@ -25,15 +29,18 @@ function rowToProduct(row: ProductRow): Product {
     name: row.name,
     slug: row.slug,
     price: Number(row.price),
-    priceFormatted: `€${Number(row.price)}`,
+    priceFormatted: CURRENCY.format(Number(row.price)),
     compareAtPrice: row.compare_at_price != null ? Number(row.compare_at_price) : undefined,
     category: row.category as ProductCategory,
     image: row.image,
     images: Array.isArray(row.images) ? row.images : [row.image],
     badge: row.badge === "New" || row.badge === "Sale" ? row.badge : undefined,
+    fit: row.fit === "Oversize" || row.fit === "Regular" ? (row.fit as ProductFit) : undefined,
+    itemCode: row.item_code ?? undefined,
     description: row.description ?? "",
     sizes: Array.isArray(row.sizes) ? row.sizes : ["S", "M", "L", "XL", "XXL"],
-    color: row.color ?? undefined,
+    colors: Array.isArray(row.colors) ? row.colors : [],
+    quantity: typeof row.quantity === "number" ? row.quantity : 0,
   };
 }
 
@@ -112,8 +119,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
     .filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        (p.color && p.color.toLowerCase().includes(q))
+        (p.colors && p.colors.some(c => c.toLowerCase().includes(q)))
     )
     .map(rowToProduct);
 }

@@ -8,10 +8,12 @@ create table if not exists public.products (
   description text not null default '',
   price numeric not null check (price >= 0),
   compare_at_price numeric check (compare_at_price is null or compare_at_price >= 0),
-  category text not null check (category in ('Women', 'Men', 'Unisex')),
+  category text not null check (category in ('Women', 'Men', 'Unisex', 'DTF')),
   badge text check (badge is null or badge in ('New', 'Sale')),
+  fit text check (fit is null or fit in ('Oversize', 'Regular')),
   color text,
   sizes jsonb not null default '["S","M","L","XL","XXL"]',
+  quantity integer not null default 0 check (quantity >= 0),
   image text not null default '',
   images jsonb not null default '[]',
   published boolean not null default true,
@@ -71,3 +73,17 @@ using (bucket_id = 'product-images');
 create policy "Allow delete product-images"
 on storage.objects for delete
 using (bucket_id = 'product-images');
+
+-- Settings (for hero image, FAQ, etc.)
+create table if not exists public.settings (
+  key text primary key,
+  value text not null,
+  updated_at timestamptz not null default now()
+);
+
+-- Default settings
+insert into public.settings (key, value) 
+values 
+  ('hero_image', '/1771954158424.jpg.jpeg'), 
+  ('faq_json', '[{"q": "What is your return policy?", "a": "You can return unworn, unwashed items with tags attached within 30 days of delivery. We''ll refund the purchase price to your original payment method. Sale items may have different terms."}]')
+on conflict (key) do nothing;

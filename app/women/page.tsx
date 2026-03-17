@@ -2,7 +2,6 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CollectionLayout from "@/components/CollectionLayout";
 import { getProductsByCategory } from "@/lib/products-db";
-import { getProductsByCategory as getStaticByCategory } from "@/lib/products";
 
 export const metadata = {
   title: "Women — Alpine",
@@ -10,8 +9,7 @@ export const metadata = {
 };
 
 export default async function WomenPage() {
-  let products = await getProductsByCategory("Women");
-  if (products.length === 0) products = getStaticByCategory("Women");
+  const products = await getProductsByCategory("Women");
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
