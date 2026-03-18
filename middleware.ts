@@ -12,7 +12,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // Allow access to login page
-  if (request.nextUrl.pathname === "/admin/login") {
+  if (
+    request.nextUrl.pathname === "/admin/login" ||
+    request.nextUrl.pathname === "/admin/forgot-password"
+  ) {
     return supabaseResponse
   }
 

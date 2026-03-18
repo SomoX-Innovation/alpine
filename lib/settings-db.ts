@@ -16,7 +16,7 @@ export async function getFaqData(): Promise<{ q: string; a: string }[]> {
     const defaultFaq = [
         {
             q: "What is your return policy?",
-            a: "You can return unworn, unwashed items with tags attached within 30 days of delivery. We'll refund the purchase price to your original payment method. Sale items may have different terms.",
+            a: "You can return unworn, unwashed items with tags attached within 7 days of delivery. We'll refund the purchase price to your original payment method. Sale items may have different terms.",
         },
         {
             q: "How long does shipping take?",

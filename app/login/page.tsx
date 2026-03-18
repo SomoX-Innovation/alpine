@@ -1,12 +1,11 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { login } from "../actions/auth";
+import { useRouter, useSearchParams } from "next/navigation";
+import { login } from "@/app/actions/auth";
 
-function AdminLoginForm() {
+function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -22,7 +21,7 @@ function AdminLoginForm() {
       setError(result.error);
       return;
     }
-    router.push("/admin");
+    router.push("/account");
     router.refresh();
   }
 
@@ -30,22 +29,25 @@ function AdminLoginForm() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--background)] px-4">
       <div className="w-full max-w-sm rounded-lg border border-[var(--border)] bg-[var(--card)] p-8">
         <h1 className="font-display text-xl font-semibold text-[var(--foreground)]">
-          Alpine Admin
+          Sign in
         </h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Sign in to manage products and orders.
+          Access your account and order history.
         </p>
+
         {reset === "1" && (
           <p className="mt-4 rounded-md bg-[var(--muted-bg)] px-3 py-2 text-sm text-[var(--foreground)]">
-            Your password has been updated. You can sign in now.
+            Your password has been updated. Please sign in.
           </p>
         )}
+
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {error && (
             <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-500">
               {error}
             </p>
           )}
+
           <div>
             <label
               htmlFor="email"
@@ -60,9 +62,10 @@ function AdminLoginForm() {
               required
               autoComplete="email"
               className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-              placeholder="admin@example.com"
+              placeholder="you@example.com"
             />
           </div>
+
           <div>
             <label
               htmlFor="password"
@@ -79,6 +82,7 @@ function AdminLoginForm() {
               className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
           </div>
+
           <button
             type="submit"
             className="w-full rounded-md bg-[var(--foreground)] py-2.5 text-sm font-semibold text-[var(--background)] transition-colors hover:bg-[var(--accent)]"
@@ -87,12 +91,16 @@ function AdminLoginForm() {
           </button>
         </form>
 
-        <div className="mt-4 text-center">
-          <Link
-            href="/admin/forgot-password"
-            className="text-sm text-[var(--accent)] hover:underline"
-          >
+        <div className="mt-4 text-center text-sm">
+          <Link href="/forgot-password" className="text-[var(--accent)] hover:underline">
             Forgot password?
+          </Link>
+        </div>
+
+        <div className="mt-3 text-center text-sm">
+          Don&apos;t have an account?{" "}
+          <Link href="/register" className="text-[var(--accent)] hover:underline">
+            Register
           </Link>
         </div>
       </div>
@@ -100,10 +108,11 @@ function AdminLoginForm() {
   );
 }
 
-export default function AdminLoginPage() {
+export default function LoginPage() {
   return (
     <Suspense fallback={null}>
-      <AdminLoginForm />
+      <LoginForm />
     </Suspense>
   );
 }
+

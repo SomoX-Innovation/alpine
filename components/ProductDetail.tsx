@@ -188,7 +188,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
 
           <ul className="mt-8 space-y-2 border-t border-[var(--border)] pt-8 text-sm text-[var(--muted)]">
             <li>Free shipping on orders over {CURRENCY.symbol} {CURRENCY.freeShippingThreshold.toLocaleString()}</li>
-            <li>30-day easy returns</li>
+            <li>7-day easy returns</li>
             <li>Secure payment</li>
           </ul>
         </div>

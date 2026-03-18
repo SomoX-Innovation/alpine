@@ -85,5 +85,5 @@ create table if not exists public.settings (
 insert into public.settings (key, value) 
 values 
   ('hero_image', '/1771954158424.jpg.jpeg'), 
-  ('faq_json', '[{"q": "What is your return policy?", "a": "You can return unworn, unwashed items with tags attached within 30 days of delivery. We''ll refund the purchase price to your original payment method. Sale items may have different terms."}]')
+  ('faq_json', '[{"q": "What is your return policy?", "a": "You can return unworn, unwashed items with tags attached within 7 days of delivery. We''ll refund the purchase price to your original payment method. Sale items may have different terms."}]')
 on conflict (key) do nothing;

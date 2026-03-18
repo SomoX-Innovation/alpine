@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { logout } from "@/app/actions/auth";
 
 type Tab = "overview" | "orders" | "profile" | "addresses";
 
@@ -12,14 +13,62 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "addresses", label: "Addresses" },
 ];
 
-export default function AccountContent() {
+export default function AccountContent({
+  userEmail,
+  userConfirmed,
+}: {
+  userEmail?: string | null;
+  userConfirmed?: boolean;
+}) {
   const [active, setActive] = useState<Tab>("overview");
+  const needsEmailConfirmation = Boolean(userEmail) && userConfirmed === false;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <h1 className="font-display text-2xl font-semibold text-[var(--foreground)]">
         My account
       </h1>
+
+      <div className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
+        {userEmail ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-semibold text-[var(--foreground)]">
+                Signed in
+              </div>
+              <div className="text-sm text-[var(--muted)]">{userEmail}</div>
+            </div>
+            <form action={logout}>
+              <button
+                type="submit"
+                className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]"
+              >
+                Log out
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-[var(--muted)]">
+              Sign in to view your order history and account details.
+            </div>
+            <div className="flex gap-3">
+              <Link
+                href="/login"
+                className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm font-semibold text-[var(--background)] hover:bg-[var(--accent)]"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/register"
+                className="rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
+              >
+                Register
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="mt-8 flex flex-col gap-8 lg:flex-row">
         <nav className="lg:w-48" aria-label="Account sections">
@@ -29,6 +78,8 @@ export default function AccountContent() {
                 <button
                   type="button"
                   onClick={() => setActive(tab.id)}
+                  disabled={needsEmailConfirmation}
+                  aria-disabled={needsEmailConfirmation}
                   className={`whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium transition-colors lg:block lg:w-full lg:text-left ${
                     active === tab.id
                       ? "bg-[var(--muted-bg)] text-[var(--foreground)]"
@@ -43,10 +94,20 @@ export default function AccountContent() {
         </nav>
 
         <div className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--card)] p-6">
+          {needsEmailConfirmation && (
+            <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-[var(--foreground)]">
+              <div className="font-semibold">Confirm your email</div>
+              <div className="mt-1 text-sm text-[var(--muted)]">
+                Please visit your mailbox and confirm your email address to activate your account.
+              </div>
+            </div>
+          )}
           {active === "overview" && (
             <div className="space-y-6">
               <p className="text-[var(--muted)]">
-                Welcome back. Manage your orders and account details here.
+                {userEmail
+                  ? "Welcome back. Manage your orders and account details here."
+                  : "You're not signed in yet. Please sign in to manage your orders and account details."}
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Link

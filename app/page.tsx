@@ -53,7 +53,7 @@ export default async function Home() {
                 Free shipping on orders over {CURRENCY.symbol} {CURRENCY.freeShippingThreshold.toLocaleString()}
               </h2>
               <p className="mt-2 text-[var(--muted)]">
-                DTF prints that last. Easy returns within 30 days.
+                DTF prints that last. Easy returns within 7 days.
               </p>
               <Link
                 href="/sale"

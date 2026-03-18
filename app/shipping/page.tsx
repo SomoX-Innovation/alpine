@@ -34,7 +34,7 @@ export default function ShippingPage() {
               Returns
             </h2>
             <ul className="mt-4 space-y-2 text-[var(--foreground)]/90">
-              <li>• 30-day return window for full-price items.</li>
+              <li>• 7-day return window for full-price items.</li>
               <li>• Items must be unworn, unwashed, with tags attached.</li>
               <li>• Refunds are processed to the original payment method.</li>
               <li>• Sale items may be final sale; check product page.</li>
