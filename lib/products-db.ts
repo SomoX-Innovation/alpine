@@ -14,6 +14,7 @@ export type ProductRow = {
   fit: string | null;
   item_code: string | null;
   colors: string[];
+  color_images: Record<string, string> | null;
   sizes: string[];
   quantity: number;
   image: string;
@@ -24,6 +25,15 @@ export type ProductRow = {
 };
 
 function rowToProduct(row: ProductRow): Product {
+  const colorImages =
+    row.color_images && typeof row.color_images === "object"
+      ? Object.fromEntries(
+          Object.entries(row.color_images).filter(
+            ([k, v]) => k.trim().length > 0 && typeof v === "string" && v.trim().length > 0
+          )
+        )
+      : {};
+
   return {
     id: row.id,
     name: row.name,
@@ -40,6 +50,7 @@ function rowToProduct(row: ProductRow): Product {
     description: row.description ?? "",
     sizes: Array.isArray(row.sizes) ? row.sizes : ["S", "M", "L", "XL", "XXL"],
     colors: Array.isArray(row.colors) ? row.colors : [],
+    colorImages,
     quantity: typeof row.quantity === "number" ? row.quantity : 0,
   };
 }

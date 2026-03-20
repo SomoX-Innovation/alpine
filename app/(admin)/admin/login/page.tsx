@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { login } from "../actions/auth";
+import BrandLogo from "@/components/BrandLogo";
 
 function AdminLoginForm() {
   const [error, setError] = useState<string | null>(null);
@@ -29,9 +30,9 @@ function AdminLoginForm() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--background)] px-4">
       <div className="w-full max-w-sm rounded-lg border border-[var(--border)] bg-[var(--card)] p-8">
-        <h1 className="font-display text-xl font-semibold text-[var(--foreground)]">
-          Alpine Admin
-        </h1>
+        <div className="mb-1">
+          <BrandLogo className="h-10 w-40" />
+        </div>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Sign in to manage products and orders.
         </p>

@@ -12,6 +12,16 @@ export async function getHeroImage(): Promise<string> {
     return getSetting("hero_image", "/1771954158424.jpg.jpeg");
 }
 
+export async function getNewDesignImage(): Promise<string> {
+    return getSetting("new_designs_image", "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&q=80");
+}
+
+export async function getSizeChartImages(): Promise<{ regular: string; oversized: string }> {
+    const regular = await getSetting("size_chart_regular_image", "");
+    const oversized = await getSetting("size_chart_oversized_image", "");
+    return { regular, oversized };
+}
+
 export async function getFaqData(): Promise<{ q: string; a: string }[]> {
     const defaultFaq = [
         {

@@ -5,6 +5,42 @@ import { createServerClient } from "@/lib/supabase";
 
 const BUCKET = "product-images";
 
+function normalizeSlug(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+async function getUniqueProductSlug(
+  supabase: NonNullable<ReturnType<typeof createServerClient>>,
+  desiredSlug: string,
+  excludeId?: string
+): Promise<string> {
+  const base = normalizeSlug(desiredSlug) || "product";
+  const { data, error } = await supabase
+    .from("products")
+    .select("id, slug")
+    .ilike("slug", `${base}%`);
+
+  if (error || !data) return base;
+
+  const taken = new Set(
+    data
+      .filter((row) => !excludeId || row.id !== excludeId)
+      .map((row) => String(row.slug))
+  );
+
+  if (!taken.has(base)) return base;
+
+  let n = 2;
+  while (taken.has(`${base}-${n}`)) n += 1;
+  return `${base}-${n}`;
+}
+
 export async function uploadProductImage(formData: FormData): Promise<{ url?: string; error?: string }> {
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) {
@@ -35,7 +71,8 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
     return { error: "Database not configured." };
   }
   const name = (formData.get("name") as string)?.trim() ?? "";
-  const slug = (formData.get("slug") as string)?.trim()?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  const rawSlug = (formData.get("slug") as string) || name;
+  const slug = await getUniqueProductSlug(supabase, rawSlug);
   const description = (formData.get("description") as string)?.trim() ?? "";
   const price = Number(formData.get("price")) || 0;
   const compareAtPriceRaw = formData.get("compare_at_price");
@@ -46,6 +83,20 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
   const fit = fitRaw === "Oversize" || fitRaw === "Regular" ? fitRaw : null;
   const item_code = (formData.get("item_code") as string)?.trim() || null;
   const colors = formData.getAll("colors").map((c) => String(c).trim()).filter(Boolean);
+  const colorImagesRaw = (formData.get("color_images") as string)?.trim() || "{}";
+  let colorImages: Record<string, string> = {};
+  try {
+    const parsed = JSON.parse(colorImagesRaw);
+    if (parsed && typeof parsed === "object") {
+      colorImages = Object.fromEntries(
+        Object.entries(parsed as Record<string, unknown>)
+          .filter(([k, v]) => k.trim().length > 0 && typeof v === "string" && v.trim().length > 0)
+          .map(([k, v]) => [k, String(v).trim()])
+      );
+    }
+  } catch {
+    colorImages = {};
+  }
   const sizesStr = (formData.get("sizes") as string)?.trim() || "S,M,L,XL,XXL";
   const sizes = sizesStr.split(",").map((s) => s.trim()).filter(Boolean);
   const quantity = Math.max(0, Math.floor(Number(formData.get("quantity")) || 0));
@@ -69,6 +120,7 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
       fit,
       item_code,
       colors,
+      color_images: colorImages,
       sizes,
       quantity,
       image: image || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
@@ -97,7 +149,8 @@ export async function updateProduct(
     return { error: "Database not configured." };
   }
   const name = (formData.get("name") as string)?.trim() ?? "";
-  const slug = (formData.get("slug") as string)?.trim()?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") ?? "";
+  const rawSlug = (formData.get("slug") as string) || name;
+  const slug = await getUniqueProductSlug(supabase, rawSlug, id);
   const description = (formData.get("description") as string)?.trim() ?? "";
   const price = Number(formData.get("price")) || 0;
   const compareAtPriceRaw = formData.get("compare_at_price");
@@ -108,6 +161,20 @@ export async function updateProduct(
   const fit = fitRaw === "Oversize" || fitRaw === "Regular" ? fitRaw : null;
   const item_code = (formData.get("item_code") as string)?.trim() || null;
   const colors = formData.getAll("colors").map((c) => String(c).trim()).filter(Boolean);
+  const colorImagesRaw = (formData.get("color_images") as string)?.trim() || "{}";
+  let colorImages: Record<string, string> = {};
+  try {
+    const parsed = JSON.parse(colorImagesRaw);
+    if (parsed && typeof parsed === "object") {
+      colorImages = Object.fromEntries(
+        Object.entries(parsed as Record<string, unknown>)
+          .filter(([k, v]) => k.trim().length > 0 && typeof v === "string" && v.trim().length > 0)
+          .map(([k, v]) => [k, String(v).trim()])
+      );
+    }
+  } catch {
+    colorImages = {};
+  }
   const sizesStr = (formData.get("sizes") as string)?.trim() || "S,M,L,XL,XXL";
   const sizes = sizesStr.split(",").map((s) => s.trim()).filter(Boolean);
   const quantity = Math.max(0, Math.floor(Number(formData.get("quantity")) || 0));
@@ -127,6 +194,7 @@ export async function updateProduct(
       fit,
       item_code,
       colors,
+      color_images: colorImages,
       sizes,
       quantity,
       image: image || undefined,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { uploadProductImage } from "../actions/products";
-import { updateHeroImage, updateFaq, updateDtfImages } from "../actions/settings";
+import { updateHeroImage, updateFaq, updateDtfImages, updateNewDesignImage, updateSizeChartImages } from "../actions/settings";
 import { createClient } from "@/lib/supabase";
 
 export default function AdminContentPage() {
@@ -19,6 +19,13 @@ export default function AdminContentPage() {
     const [dtfImages, setDtfImages] = useState<string[]>([]);
     const [dtfError, setDtfError] = useState<string | null>(null);
     const [dtfSuccess, setDtfSuccess] = useState(false);
+    const [newDesignImage, setNewDesignImage] = useState("");
+    const [newDesignError, setNewDesignError] = useState<string | null>(null);
+    const [newDesignSuccess, setNewDesignSuccess] = useState(false);
+    const [sizeChartRegular, setSizeChartRegular] = useState("");
+    const [sizeChartOversized, setSizeChartOversized] = useState("");
+    const [sizeChartError, setSizeChartError] = useState<string | null>(null);
+    const [sizeChartSuccess, setSizeChartSuccess] = useState(false);
 
     useEffect(() => {
         async function fetchSettings() {
@@ -67,6 +74,33 @@ export default function AdminContentPage() {
                         setDtfImages(parsed.filter((u: unknown) => typeof u === "string" && String(u).trim()));
                     }
                 } catch { }
+            }
+
+            const { data: newDesignData } = await supabase
+                .from("settings")
+                .select("value")
+                .eq("key", "new_designs_image")
+                .single();
+            if (newDesignData?.value) {
+                setNewDesignImage(newDesignData.value);
+            }
+
+            const { data: regularChartData } = await supabase
+                .from("settings")
+                .select("value")
+                .eq("key", "size_chart_regular_image")
+                .single();
+            if (regularChartData?.value) {
+                setSizeChartRegular(regularChartData.value);
+            }
+
+            const { data: oversizedChartData } = await supabase
+                .from("settings")
+                .select("value")
+                .eq("key", "size_chart_oversized_image")
+                .single();
+            if (oversizedChartData?.value) {
+                setSizeChartOversized(oversizedChartData.value);
             }
             setLoading(false);
         }
@@ -144,6 +178,59 @@ export default function AdminContentPage() {
         const res = await updateDtfImages(urls);
         if (res.error) setDtfError(res.error);
         else setDtfSuccess(true);
+    }
+
+    async function handleNewDesignImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploading(true);
+        setNewDesignError(null);
+        setNewDesignSuccess(false);
+        const formData = new FormData();
+        formData.set("file", file);
+        const result = await uploadProductImage(formData);
+        setUploading(false);
+        if (result.error) {
+            setNewDesignError(result.error);
+            return;
+        }
+        if (result.url) setNewDesignImage(result.url);
+    }
+
+    async function saveNewDesignImage() {
+        setNewDesignError(null);
+        setNewDesignSuccess(false);
+        const res = await updateNewDesignImage(newDesignImage);
+        if (res.error) setNewDesignError(res.error);
+        else setNewDesignSuccess(true);
+    }
+
+    async function handleSizeChartChange(kind: "regular" | "oversized", e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploading(true);
+        setSizeChartError(null);
+        setSizeChartSuccess(false);
+        const formData = new FormData();
+        formData.set("file", file);
+        const result = await uploadProductImage(formData);
+        setUploading(false);
+        if (result.error) {
+            setSizeChartError(result.error);
+            return;
+        }
+        if (result.url) {
+            if (kind === "regular") setSizeChartRegular(result.url);
+            else setSizeChartOversized(result.url);
+        }
+    }
+
+    async function saveSizeCharts() {
+        setSizeChartError(null);
+        setSizeChartSuccess(false);
+        const res = await updateSizeChartImages(sizeChartRegular, sizeChartOversized);
+        if (res.error) setSizeChartError(res.error);
+        else setSizeChartSuccess(true);
     }
 
     if (loading) {
@@ -339,6 +426,120 @@ export default function AdminContentPage() {
                             className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)] hover:bg-[var(--accent)]"
                         >
                             Save DTF images
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            {/* New Designs Card Image */}
+            <section className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-6">
+                <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">
+                    New Designs Card Image
+                </h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                    Image used for the "New Designs" card in the Shop by style section.
+                </p>
+                <div className="mt-6 space-y-4 max-w-xl">
+                    {newDesignError && (
+                        <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-500">
+                            {newDesignError}
+                        </p>
+                    )}
+                    {newDesignSuccess && (
+                        <p className="rounded-md bg-green-500/10 px-3 py-2 text-sm text-green-500">
+                            New Designs image updated successfully.
+                        </p>
+                    )}
+                    {newDesignImage && (
+                        <div className="mb-4">
+                            <img src={newDesignImage} alt="New Designs" className="h-40 w-auto rounded border border-[var(--border)] object-cover" />
+                        </div>
+                    )}
+                    <div>
+                        <label className="block text-sm font-medium text-[var(--foreground)]">
+                            Upload new image
+                        </label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleNewDesignImageChange}
+                            disabled={uploading}
+                            className="mt-1 block w-full text-sm text-[var(--muted)]"
+                        />
+                    </div>
+                    <div className="pt-2">
+                        <button
+                            type="button"
+                            onClick={saveNewDesignImage}
+                            disabled={uploading}
+                            className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)] hover:bg-[var(--accent)] disabled:opacity-50"
+                        >
+                            Save New Designs Image
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            {/* Size Guide Images */}
+            <section className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-6">
+                <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">
+                    Size Guide Images
+                </h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                    Upload Regular and Oversized size chart images for the Size Guide page.
+                </p>
+                <div className="mt-6 space-y-5 max-w-2xl">
+                    {sizeChartError && (
+                        <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-500">
+                            {sizeChartError}
+                        </p>
+                    )}
+                    {sizeChartSuccess && (
+                        <p className="rounded-md bg-green-500/10 px-3 py-2 text-sm text-green-500">
+                            Size chart images updated successfully.
+                        </p>
+                    )}
+
+                    <div>
+                        <label className="block text-sm font-medium text-[var(--foreground)]">
+                            Regular size chart
+                        </label>
+                        {sizeChartRegular && (
+                            <img src={sizeChartRegular} alt="Regular size chart" className="mt-2 h-32 w-auto rounded border border-[var(--border)] object-cover" />
+                        )}
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleSizeChartChange("regular", e)}
+                            disabled={uploading}
+                            className="mt-2 block w-full text-sm text-[var(--muted)]"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-[var(--foreground)]">
+                            Oversized size chart
+                        </label>
+                        {sizeChartOversized && (
+                            <img src={sizeChartOversized} alt="Oversized size chart" className="mt-2 h-32 w-auto rounded border border-[var(--border)] object-cover" />
+                        )}
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleSizeChartChange("oversized", e)}
+                            disabled={uploading}
+                            className="mt-2 block w-full text-sm text-[var(--muted)]"
+                        />
+                    </div>
+
+                    <div className="pt-1">
+                        <button
+                            type="button"
+                            onClick={saveSizeCharts}
+                            disabled={uploading}
+                            className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)] hover:bg-[var(--accent)] disabled:opacity-50"
+                        >
+                            Save Size Charts
                         </button>
                     </div>
                 </div>

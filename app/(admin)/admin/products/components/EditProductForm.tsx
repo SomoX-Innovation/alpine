@@ -12,6 +12,16 @@ export default function EditProductForm({ product, categories = [], colors = [] 
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState(product.image);
+  const [selectedColors, setSelectedColors] = useState<string[]>(Array.isArray(product.colors) ? product.colors : []);
+  const [colorImages, setColorImages] = useState<Record<string, string>>(
+    product.color_images && typeof product.color_images === "object"
+      ? Object.fromEntries(
+        Object.entries(product.color_images).filter(
+          ([k, v]) => k.trim().length > 0 && typeof v === "string" && v.trim().length > 0
+        )
+      )
+      : {}
+  );
   const [uploading, setUploading] = useState(false);
 
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -35,6 +45,9 @@ export default function EditProductForm({ product, categories = [], colors = [] 
     setError(null);
     const form = e.currentTarget;
     const formData = new FormData(form);
+    formData.delete("colors");
+    selectedColors.forEach((c) => formData.append("colors", c));
+    formData.set("color_images", JSON.stringify(colorImages));
     formData.set("image", imageUrl);
     const result = await updateProduct(product.id, formData);
     if (result.error) {
@@ -43,6 +56,43 @@ export default function EditProductForm({ product, categories = [], colors = [] 
     }
     router.push("/admin/products");
     router.refresh();
+  }
+
+  function toggleColor(colorName: string) {
+    setSelectedColors((prev) => {
+      const exists = prev.includes(colorName);
+      if (exists) {
+        const next = prev.filter((c) => c !== colorName);
+        setColorImages((old) => {
+          const copy = { ...old };
+          delete copy[colorName];
+          return copy;
+        });
+        return next;
+      }
+      return [...prev, colorName];
+    });
+  }
+
+  function updateColorImage(colorName: string, url: string) {
+    setColorImages((prev) => ({ ...prev, [colorName]: url }));
+  }
+
+  async function uploadColorImage(colorName: string, file: File | undefined) {
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    const formData = new FormData();
+    formData.set("file", file);
+    const result = await uploadProductImage(formData);
+    setUploading(false);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    if (result.url) {
+      updateColorImage(colorName, result.url);
+    }
   }
 
   async function handleDelete() {
@@ -212,9 +262,9 @@ export default function EditProductForm({ product, categories = [], colors = [] 
               <label key={c.id} className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  name="colors"
                   value={c.name}
-                  defaultChecked={product.colors?.includes(c.name)}
+                  checked={selectedColors.includes(c.name)}
+                  onChange={() => toggleColor(c.name)}
                   className="rounded border-[var(--border)]"
                 />
                 <span className="text-sm text-[var(--foreground)]">{c.name}</span>
@@ -222,6 +272,33 @@ export default function EditProductForm({ product, categories = [], colors = [] 
             ))}
           </div>
         </div>
+
+        {selectedColors.length > 0 && (
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-[var(--foreground)]">
+              Color-wise images
+            </label>
+            {selectedColors.map((colorName) => (
+              <div key={colorName} className="rounded-md border border-[var(--border)] p-3">
+                <p className="text-sm font-medium text-[var(--foreground)]">{colorName}</p>
+                <input
+                  type="text"
+                  value={colorImages[colorName] ?? ""}
+                  onChange={(e) => updateColorImage(colorName, e.target.value)}
+                  className="mt-2 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none"
+                  placeholder="https://..."
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => uploadColorImage(colorName, e.target.files?.[0])}
+                  disabled={uploading}
+                  className="mt-2 block w-full text-sm text-[var(--muted)]"
+                />
+              </div>
+            ))}
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-[var(--foreground)]">

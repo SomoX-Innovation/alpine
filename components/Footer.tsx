@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import BrandLogo from "./BrandLogo";
 
 const footerLinks = {
   shop: [
@@ -30,13 +30,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link href="/" className="inline-block" aria-label="Alpine – Home">
-              <Image
-                src="/logo.png"
-                alt="Alpine"
-                width={100}
-                height={30}
-                className="h-7 w-auto"
-              />
+              <BrandLogo className="h-7 w-24" />
             </Link>
             <p className="mt-3 max-w-xs text-sm text-[var(--muted)]">
               Premium apparel. Vibrant, durable designs. Women, men & more.
@@ -128,16 +122,21 @@ export default function Footer() {
                 Get early access to new drops and exclusive offers.
               </p>
             </div>
-            <form className="flex w-full max-w-sm gap-2 sm:w-auto">
+            <form
+              className="flex w-full max-w-sm gap-2 sm:w-auto"
+              suppressHydrationWarning
+            >
               <input
                 type="email"
                 placeholder="Your email"
                 className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                 aria-label="Email for newsletter"
+                suppressHydrationWarning
               />
               <button
                 type="submit"
                 className="rounded-md bg-[var(--foreground)] px-4 py-2.5 text-sm font-medium text-[var(--background)] transition-colors hover:bg-[var(--accent)]"
+                suppressHydrationWarning
               >
                 Subscribe
               </button>
@@ -148,7 +147,11 @@ export default function Footer() {
         {/* Bottom */}
         <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-[var(--border)] pt-8 sm:flex-row">
           <p className="text-xs text-[var(--muted)]">
-            © {new Date().getFullYear()} Alpine. All rights reserved.
+            ©{" "}
+            <span suppressHydrationWarning>
+              {new Date().getFullYear()}
+            </span>{" "}
+            Alpine. All rights reserved.
           </p>
           <div className="flex gap-6">
             <Link

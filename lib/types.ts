@@ -21,6 +21,8 @@ export type Product = {
   sizes: string[];
   /** Colors / shades, e.g. ["Black", "White", "Heather Grey"] */
   colors: string[];
+  /** Optional image per color name, e.g. { Black: "https://..." } */
+  colorImages?: Record<string, string>;
   /** Stock quantity (0 = out of stock) */
   quantity: number;
 };

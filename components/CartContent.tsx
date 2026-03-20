@@ -51,6 +51,7 @@ export default function CartContent() {
                   src={item.image}
                   alt={item.name}
                   fill
+                  unoptimized={item.image.includes("/storage/v1/object/public/")}
                   sizes="80px"
                   className="object-cover"
                 />

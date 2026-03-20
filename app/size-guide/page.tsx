@@ -1,13 +1,16 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import { getSizeChartImages } from "@/lib/settings-db";
 
 export const metadata = {
   title: "Size Guide — Alpine",
   description: "How to find your size.",
 };
 
-export default function SizeGuidePage() {
+export default async function SizeGuidePage() {
+  const charts = await getSizeChartImages();
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
@@ -17,77 +20,40 @@ export default function SizeGuidePage() {
             Size guide
           </h1>
           <p className="mt-4 text-[var(--foreground)]/90">
-            Measure yourself with a soft tape. Compare to the table below. If
+            Measure yourself with a soft tape. Compare to the charts below. If
             you&apos;re between sizes, we recommend sizing up for comfort.
           </p>
 
-          <h2 className="font-display mt-10 text-xl font-semibold text-[var(--foreground)]">
-            Women
-          </h2>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border)]">
-                  <th className="py-2 text-left font-medium">Size</th>
-                  <th className="py-2 text-left font-medium">Bust (cm)</th>
-                  <th className="py-2 text-left font-medium">Waist (cm)</th>
-                  <th className="py-2 text-left font-medium">Hips (cm)</th>
-                </tr>
-              </thead>
-              <tbody className="text-[var(--muted)]">
-                {[
-                  ["XS", "82-86", "62-66", "88-92"],
-                  ["S", "86-90", "66-70", "92-96"],
-                  ["M", "90-94", "70-74", "96-100"],
-                  ["L", "94-98", "74-78", "100-104"],
-                  ["XL", "98-102", "78-82", "104-108"],
-                ].map((row, i) => (
-                  <tr key={i} className="border-b border-[var(--border)]">
-                    <td className="py-3 font-medium text-[var(--foreground)]">
-                      {row[0]}
-                    </td>
-                    <td className="py-3">{row[1]}</td>
-                    <td className="py-3">{row[2]}</td>
-                    <td className="py-3">{row[3]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <h2 className="font-display mt-10 text-xl font-semibold text-[var(--foreground)]">
-            Men
-          </h2>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border)]">
-                  <th className="py-2 text-left font-medium">Size</th>
-                  <th className="py-2 text-left font-medium">Chest (cm)</th>
-                  <th className="py-2 text-left font-medium">Waist (cm)</th>
-                  <th className="py-2 text-left font-medium">Hips (cm)</th>
-                </tr>
-              </thead>
-              <tbody className="text-[var(--muted)]">
-                {[
-                  ["S", "86-90", "70-74", "88-92"],
-                  ["M", "90-94", "74-78", "92-96"],
-                  ["L", "94-98", "78-82", "96-100"],
-                  ["XL", "98-102", "82-86", "100-104"],
-                  ["XXL", "102-106", "86-90", "104-108"],
-                ].map((row, i) => (
-                  <tr key={i} className="border-b border-[var(--border)]">
-                    <td className="py-3 font-medium text-[var(--foreground)]">
-                      {row[0]}
-                    </td>
-                    <td className="py-3">{row[1]}</td>
-                    <td className="py-3">{row[2]}</td>
-                    <td className="py-3">{row[3]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {(charts.regular || charts.oversized) && (
+            <div className="mt-8 space-y-8">
+              {charts.regular && (
+                <div>
+                  <h2 className="font-display text-xl font-semibold text-[var(--foreground)]">
+                    Regular T-Shirt Size Chart
+                  </h2>
+                  <img
+                    src={charts.regular}
+                    alt="Regular t-shirt size chart"
+                    className="mt-3 w-full rounded-lg border border-[var(--border)]"
+                    loading="lazy"
+                  />
+                </div>
+              )}
+              {charts.oversized && (
+                <div>
+                  <h2 className="font-display text-xl font-semibold text-[var(--foreground)]">
+                    Oversized T-Shirt Size Chart
+                  </h2>
+                  <img
+                    src={charts.oversized}
+                    alt="Oversized t-shirt size chart"
+                    className="mt-3 w-full rounded-lg border border-[var(--border)]"
+                    loading="lazy"
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           <Link
             href="/women"

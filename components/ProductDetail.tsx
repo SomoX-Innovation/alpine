@@ -11,12 +11,16 @@ type ProductDetailProps = { product: Product };
 
 export default function ProductDetail({ product }: ProductDetailProps) {
   const [selectedSize, setSelectedSize] = useState<string>(product.sizes[0] ?? "One Size");
+  const [selectedColor, setSelectedColor] = useState<string>(product.colors?.[0] ?? "");
   const maxQty = typeof product.quantity === "number" ? product.quantity : 999;
   const [quantity, setQuantity] = useState(Math.min(1, maxQty));
   const [added, setAdded] = useState(false);
   const { addItem } = useCart();
   const outOfStock = maxQty === 0;
   const images = product.images.length > 0 ? product.images : [product.image];
+  const colorImage = selectedColor ? product.colorImages?.[selectedColor] : undefined;
+  const mainImage = colorImage || images[0] || product.image;
+  const useUnoptimized = mainImage.includes("/storage/v1/object/public/");
 
   function handleAddToCart() {
     addItem({
@@ -58,10 +62,11 @@ export default function ProductDetail({ product }: ProductDetailProps) {
         {/* Gallery */}
         <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-[var(--muted-bg)]">
           <Image
-            src={images[0] ?? product.image}
+            src={mainImage}
             alt={product.name}
             fill
             priority
+            unoptimized={useUnoptimized}
             sizes="(max-width: 1024px) 100vw, 50vw"
             className="object-cover"
           />
@@ -107,6 +112,29 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           )}
 
           <p className="mt-6 text-[var(--foreground)]/90">{product.description}</p>
+
+          {product.colors?.length > 0 && (
+            <div className="mt-8">
+              <label className="text-sm font-semibold text-[var(--foreground)]">
+                Color
+              </label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {product.colors.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setSelectedColor(color)}
+                    className={`rounded-md border px-4 py-2.5 text-sm font-medium transition-colors ${selectedColor === color
+                      ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]"
+                      : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:border-[var(--accent)]"
+                      }`}
+                  >
+                    {color}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Size */}
           <div className="mt-8">

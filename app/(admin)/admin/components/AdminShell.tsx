@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "../actions/auth";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -16,9 +17,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         <div className="p-4">
           <Link
             href="/admin"
-            className="font-display text-lg font-semibold text-[var(--foreground)]"
+            className="inline-flex items-center"
+            aria-label="Alpine Admin Home"
           >
-            Alpine Admin
+            <BrandLogo className="h-8 w-28" />
           </Link>
         </div>
         <nav className="space-y-0.5 px-2 pb-4">

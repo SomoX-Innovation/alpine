@@ -7,6 +7,8 @@ type ProductCardProps = {
 };
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const useUnoptimized = product.image.includes("/storage/v1/object/public/");
+
   return (
     <Link
       href={`/product/${product.id}`}
@@ -18,6 +20,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           src={product.image}
           alt={product.name}
           fill
+          unoptimized={useUnoptimized}
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
@@ -31,7 +34,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             {product.badge}
           </span>
         )}
-        {product.compareAtPrice != null && (
+        {product.compareAtPrice != null && product.badge !== "Sale" && (
           <span className="absolute right-3 top-3 rounded bg-[var(--foreground)] px-2.5 py-1 text-xs font-semibold text-[var(--background)]">
             Sale
           </span>

@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
+import BrandLogo from "./BrandLogo";
 
 const navLinks = [
   { href: "/women", label: "Women" },
@@ -53,14 +53,7 @@ export default function Header() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center" aria-label="Alpine – Home">
-          <Image
-            src="/logo.png"
-            alt="Alpine"
-            width={120}
-            height={36}
-            className="h-8 w-auto sm:h-9"
-            priority
-          />
+          <BrandLogo className="h-8 w-28 sm:h-9 sm:w-32" />
         </Link>
 
         {/* Desktop nav */}

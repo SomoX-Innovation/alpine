@@ -55,3 +55,23 @@ export async function updateDtfItems(
     }
     return res;
 }
+
+export async function updateNewDesignImage(imageUrl: string): Promise<{ error?: string }> {
+    const res = await updateSetting("new_designs_image", imageUrl);
+    if (!res.error) {
+        revalidatePath("/");
+        revalidatePath("/admin/content");
+    }
+    return res;
+}
+
+export async function updateSizeChartImages(regularImageUrl: string, oversizedImageUrl: string): Promise<{ error?: string }> {
+    const a = await updateSetting("size_chart_regular_image", regularImageUrl);
+    if (a.error) return a;
+    const b = await updateSetting("size_chart_oversized_image", oversizedImageUrl);
+    if (b.error) return b;
+
+    revalidatePath("/size-guide");
+    revalidatePath("/admin/content");
+    return {};
+}

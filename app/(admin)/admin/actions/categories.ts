@@ -59,6 +59,7 @@ export async function createCategory(formData: FormData): Promise<{ error?: stri
     }
 
     revalidatePath("/admin/categories");
+    revalidatePath("/");
     return { id: data.id };
 }
 
@@ -83,6 +84,7 @@ export async function updateCategory(id: string, formData: FormData): Promise<{ 
     }
 
     revalidatePath("/admin/categories");
+    revalidatePath("/");
     return {};
 }
 
@@ -94,5 +96,6 @@ export async function deleteCategory(id: string): Promise<{ error?: string }> {
     if (error) return { error: error.message };
 
     revalidatePath("/admin/categories");
+    revalidatePath("/");
     return {};
 }

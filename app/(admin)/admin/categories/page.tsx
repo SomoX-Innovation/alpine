@@ -49,7 +49,13 @@ export default async function CategoriesPage() {
                                 <td className="px-4 py-3">
                                     <div className="relative h-10 w-10 overflow-hidden rounded bg-[var(--muted-bg)]">
                                         {category.image ? (
-                                            <Image src={category.image} alt={category.name} fill className="object-cover" />
+                                            <Image
+                                                src={category.image}
+                                                alt={category.name}
+                                                fill
+                                                unoptimized={category.image.includes("/storage/v1/object/public/")}
+                                                className="object-cover"
+                                            />
                                         ) : (
                                             <span className="flex h-full w-full items-center justify-center text-xs text-[var(--muted)]">No img</span>
                                         )}

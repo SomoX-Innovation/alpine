@@ -341,6 +341,7 @@ export default function CheckoutContent() {
                       src={item.image}
                       alt={item.name}
                       fill
+                      unoptimized={item.image.includes("/storage/v1/object/public/")}
                       sizes="56px"
                       className="object-cover"
                     />

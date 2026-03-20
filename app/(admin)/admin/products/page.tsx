@@ -65,7 +65,13 @@ export default async function AdminProductsPage() {
                 >
                   <td className="px-4 py-3">
                     <div className="relative h-10 w-10 overflow-hidden rounded bg-[var(--muted-bg)]">
-                      <Image src={p.image} alt={p.name} fill className="object-cover" />
+                      <Image
+                        src={p.image}
+                        alt={p.name}
+                        fill
+                        unoptimized={p.image.includes("/storage/v1/object/public/")}
+                        className="object-cover"
+                      />
                     </div>
                   </td>
                   <td className="px-4 py-3 font-medium text-[var(--foreground)]">
