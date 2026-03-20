@@ -53,8 +53,9 @@ export default function CustomizedTShirtContent() {
       setError(res.error);
       return;
     }
-    if (res.url) {
-      setDesignUrls((prev) => ({ ...prev, [placement]: res.url }));
+    const uploadedUrl = res.url;
+    if (typeof uploadedUrl === "string" && uploadedUrl.length > 0) {
+      setDesignUrls((prev) => ({ ...prev, [placement]: uploadedUrl }));
     }
   }
 
