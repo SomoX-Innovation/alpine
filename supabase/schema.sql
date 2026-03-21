@@ -38,6 +38,7 @@ create table if not exists public.orders (
   subtotal numeric not null,
   shipping_cost numeric not null,
   total numeric not null,
+  payment_method text not null default 'card' check (payment_method in ('card', 'cod')),
   tracking_code text,
   tracking_carrier text,
   created_at timestamptz not null default now(),

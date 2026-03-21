@@ -22,7 +22,6 @@ export default function CheckoutContent() {
     postalCode: "",
     country: "",
   });
-
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const shipping = subtotal >= CURRENCY.freeShippingThreshold ? 0 : CURRENCY.shippingCost;
   const total = subtotal + shipping;
@@ -70,7 +69,8 @@ export default function CheckoutContent() {
           </p>
         )}
         <p className="mt-2 text-[var(--muted)]">
-          We&apos;ve sent a confirmation email. You&apos;ll get a shipping update soon. You can track your order with the order number above.
+          You chose <strong>Cash on Delivery</strong>. Please keep the exact amount ready when your order arrives.
+          We&apos;ll confirm by email. You can track your order with the order number above.
         </p>
         <Link
           href="/"
@@ -267,6 +267,7 @@ export default function CheckoutContent() {
                   subtotal,
                   shipping_cost: shipping,
                   total,
+                  payment_method: "cod",
                 });
                 if (result.error) {
                   setError(result.error);
@@ -280,41 +281,35 @@ export default function CheckoutContent() {
               {error && (
                 <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-500">{error}</p>
               )}
-              <div>
-                <label className="block text-sm font-medium text-[var(--foreground)]">
-                  Card number
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="4242 4242 4242 4242"
-                  className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--foreground)]">
-                    Expiry
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="MM/YY"
-                    className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                  />
+              <fieldset className="space-y-3">
+                <legend className="text-sm font-medium text-[var(--foreground)]">Payment method</legend>
+                <div className="flex items-start gap-3 rounded-md border-2 border-[var(--foreground)] bg-[var(--card)] p-4">
+                  <input type="radio" name="paymentMethod" checked readOnly className="mt-1" aria-checked="true" />
+                  <span>
+                    <span className="block font-medium text-[var(--foreground)]">Cash on delivery (COD)</span>
+                    <span className="text-sm text-[var(--muted)]">
+                      Pay with cash when your order is delivered.
+                    </span>
+                  </span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-[var(--foreground)]">
-                    CVC
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="123"
-                    className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                  />
+                <div
+                  className="flex items-start gap-3 rounded-md border border-[var(--border)] bg-[var(--muted-bg)]/50 p-4 opacity-75"
+                  aria-disabled="true"
+                >
+                  <input type="radio" name="paymentMethodCard" disabled className="mt-1" />
+                  <span className="flex-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-[var(--foreground)]">Card payment</span>
+                      <span className="rounded-full bg-[var(--muted-bg)] px-2 py-0.5 text-xs font-medium text-[var(--muted)]">
+                        Coming soon
+                      </span>
+                    </span>
+                    <span className="mt-1 block text-sm text-[var(--muted)]">
+                      Online card payments will be available here soon.
+                    </span>
+                  </span>
                 </div>
-              </div>
+              </fieldset>
               <button
                 type="submit"
                 className="w-full rounded-md bg-[var(--foreground)] py-3 text-sm font-semibold text-[var(--background)] hover:bg-[var(--accent)]"

@@ -35,6 +35,14 @@ export default async function AdminOrderDetailPage({
             </h2>
             <p className="mt-1 text-[var(--foreground)]">{order.customer_name}</p>
             <p className="text-sm text-[var(--muted)]">{order.customer_email}</p>
+            <p className="mt-2 text-sm text-[var(--foreground)]">
+              <span className="text-[var(--muted)]">Payment: </span>
+              {order.payment_method === "cod"
+                ? "Cash on delivery"
+                : order.payment_method === "card"
+                  ? "Card"
+                  : (order.payment_method as string) || "—"}
+            </p>
           </section>
           <section>
             <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">

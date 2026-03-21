@@ -20,6 +20,11 @@ export const metadata: Metadata = {
   title: "Alpine — Apparel",
   description:
     "Premium apparel. Vibrant, durable designs. Women, men & more.",
+  icons: {
+    icon: "/icon",
+    shortcut: "/icon",
+    apple: "/icon",
+  },
 };
 
 export default function RootLayout({

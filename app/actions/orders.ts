@@ -11,6 +11,8 @@ export type OrderLineItem = {
   price: number;
 };
 
+export type PaymentMethod = "card" | "cod";
+
 export type CreateOrderInput = {
   customer_email: string;
   customer_name: string;
@@ -24,6 +26,8 @@ export type CreateOrderInput = {
   subtotal: number;
   shipping_cost: number;
   total: number;
+  /** card = mock checkout; cod = cash on delivery (pay when order arrives) */
+  payment_method?: PaymentMethod;
 };
 
 export async function createOrder(input: CreateOrderInput): Promise<{ order_number?: string; error?: string }> {
@@ -34,9 +38,12 @@ export async function createOrder(input: CreateOrderInput): Promise<{ order_numb
   const { count } = await supabase.from("orders").select("id", { count: "exact", head: true });
   const order_number = `ALP-${1001 + (count ?? 0)}`;
 
+  const paymentMethod: PaymentMethod = input.payment_method === "cod" ? "cod" : "card";
+  const status = paymentMethod === "cod" ? "pending" : "paid";
+
   const { error } = await supabase.from("orders").insert({
     order_number,
-    status: "paid",
+    status,
     customer_email: input.customer_email.trim().toLowerCase(),
     customer_name: input.customer_name,
     shipping_address: input.shipping_address,
@@ -44,6 +51,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{ order_numb
     subtotal: input.subtotal,
     shipping_cost: input.shipping_cost,
     total: input.total,
+    payment_method: paymentMethod,
   });
 
   if (error) {
@@ -110,6 +118,7 @@ export type OrderDetail = {
   subtotal: number;
   shipping_cost: number;
   total: number;
+  payment_method?: PaymentMethod | string;
   tracking_code: string | null;
   tracking_carrier: string | null;
   created_at: string;
