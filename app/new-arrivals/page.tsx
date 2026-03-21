@@ -5,7 +5,7 @@ import { getNewArrivals } from "@/lib/products-db";
 
 export const metadata = {
   title: "New Designs — Alpine",
-  description: "Latest DTF print t-shirt drops.",
+  description: "Latest drops: new badge items and products added in the last 30 days.",
 };
 
 export default async function NewArrivalsPage() {
@@ -16,7 +16,7 @@ export default async function NewArrivalsPage() {
       <main className="flex-1">
         <CollectionLayout
           title="New Designs"
-          description="Fresh DTF print drops. New graphics, same premium quality."
+          description="Fresh DTF print drops — tagged New, or added in the last 30 days."
           products={products}
         />
       </main>

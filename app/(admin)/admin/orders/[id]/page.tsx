@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getOrderById } from "@/app/actions/orders";
 import OrderDetailForm from "../components/OrderDetailForm";
+import OrderLineItemsList from "@/components/OrderLineItemsList";
 
 export default async function AdminOrderDetailPage({
   params,
@@ -62,20 +63,7 @@ export default async function AdminOrderDetailPage({
             <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">
               Items
             </h2>
-            <ul className="mt-2 space-y-2">
-              {(order.line_items ?? []).map((item, i) => (
-                <li
-                  key={i}
-                  className="flex justify-between text-sm text-[var(--foreground)]"
-                >
-                  <span>
-                    {item.name} — {item.size}
-                    {item.fit ? ` — ${item.fit}` : ""} × {item.quantity}
-                  </span>
-                  <span>Rs. {(item.price * item.quantity).toFixed(2)}</span>
-                </li>
-              ))}
-            </ul>
+            <OrderLineItemsList items={order.line_items ?? []} variant="compact" />
             <dl className="mt-4 space-y-1 border-t border-[var(--border)] pt-4 text-sm">
               <div className="flex justify-between">
                 <dt className="text-[var(--muted)]">Subtotal</dt>

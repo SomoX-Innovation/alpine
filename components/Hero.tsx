@@ -9,7 +9,7 @@ export default function Hero({ heroImageSrc }: { heroImageSrc: string }) {
 
   const ValuePropsStrip = memo(function ValuePropsStrip() {
     return (
-      <div className="relative z-10 border-t border-white/20 bg-black/60 backdrop-blur-sm">
+      <div className="relative z-10 border-t border-white/25 bg-black/45 backdrop-blur-sm">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-8 px-4 py-5 sm:gap-12 sm:py-6">
           <div className="flex items-center gap-3 text-white">
             <span className="text-[var(--gold-soft)]">
@@ -58,10 +58,11 @@ export default function Hero({ heroImageSrc }: { heroImageSrc: string }) {
           priority
           sizes="100vw"
           quality={95}
-          className="object-cover object-top"
+          className="object-cover object-top brightness-110 saturate-[1.05]"
         />
+        {/* Lighter overlay so the hero photo reads brighter; tweak opacity to taste */}
         <div
-          className="absolute inset-0 bg-black/40"
+          className="absolute inset-0 bg-black/25"
           aria-hidden="true"
         />
       </div>
@@ -69,7 +70,7 @@ export default function Hero({ heroImageSrc }: { heroImageSrc: string }) {
       <div className="relative z-10 flex flex-1 items-end justify-center pb-8">
         <Link
           href="/new-arrivals"
-          className="rounded border border-white/30 bg-black/80 px-8 py-3 text-sm font-semibold uppercase tracking-wider text-white transition hover:bg-black/90 hover:border-white/50"
+          className="rounded border border-white/35 bg-black/65 px-8 py-3 text-sm font-semibold uppercase tracking-wider text-white shadow-lg transition hover:bg-black/75 hover:border-white/55"
         >
           Shop Now
         </Link>

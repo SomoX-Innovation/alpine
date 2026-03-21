@@ -46,6 +46,8 @@ export type OrderLineItem = {
   price: number;
   /** Regular / Oversize when applicable */
   fit?: string;
+  /** Product image URL at checkout (shown on order details & account) */
+  image?: string;
 };
 
 export type PaymentMethod = "card" | "cod";
@@ -225,6 +227,8 @@ export type CustomerOrderSummary = {
   created_at: string;
   status: string;
   total: number;
+  /** Included so order history can show thumbnails (newer orders include `image` on lines) */
+  line_items?: OrderLineItem[];
 };
 
 /** Orders for the currently signed-in customer (same email as account). */
@@ -238,7 +242,7 @@ export async function getMyOrders(): Promise<CustomerOrderSummary[]> {
   const email = user.email.trim().toLowerCase();
   const { data, error } = await supabase
     .from("orders")
-    .select("id, order_number, created_at, status, total")
+    .select("id, order_number, created_at, status, total, line_items")
     .eq("customer_email", email)
     .order("created_at", { ascending: false });
 

@@ -2,6 +2,9 @@ import type { Product, ProductCategory, ProductFit } from "@/lib/types";
 import { createServerClient } from "@/lib/supabase";
 import { CURRENCY } from "@/lib/currency";
 
+/** Published products created within this many days appear on New Designs (with badge New). */
+export const NEW_DESIGNS_RECENT_DAYS = 30;
+
 export type ProductRow = {
   id: string;
   name: string;
@@ -117,9 +120,25 @@ export async function getProductsByCategory(category: ProductCategory): Promise<
 export async function getNewArrivals(): Promise<Product[]> {
   const supabase = createServerClient();
   if (!supabase) return [];
-  const { data, error } = await supabase.from("products").select("*").eq("published", true).eq("badge", "New");
-  if (error) return [];
-  return ((data ?? []) as ProductRow[]).map(rowToProduct);
+  const since = new Date();
+  since.setUTCDate(since.getUTCDate() - NEW_DESIGNS_RECENT_DAYS);
+  const sinceIso = since.toISOString();
+
+  const [byBadge, byRecent] = await Promise.all([
+    supabase.from("products").select("*").eq("published", true).eq("badge", "New"),
+    supabase.from("products").select("*").eq("published", true).gte("created_at", sinceIso),
+  ]);
+
+  if (byBadge.error && byRecent.error) return [];
+
+  const map = new Map<string, ProductRow>();
+  for (const row of [...(byBadge.data ?? []), ...(byRecent.data ?? [])] as ProductRow[]) {
+    map.set(row.id, row);
+  }
+  const merged = [...map.values()].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  return merged.map(rowToProduct);
 }
 
 export async function getSaleProducts(): Promise<Product[]> {

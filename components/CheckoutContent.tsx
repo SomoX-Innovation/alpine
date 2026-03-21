@@ -208,6 +208,7 @@ export default function CheckoutContent({ userEmail }: CheckoutContentProps) {
                     size: i.size,
                     quantity: i.quantity,
                     price: i.price,
+                    image: i.image,
                     ...(i.fit ? { fit: i.fit } : {}),
                   })),
                   subtotal,

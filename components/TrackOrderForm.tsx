@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { getOrderByNumberAndEmail } from "@/app/actions/orders";
 import type { OrderLookupResult } from "@/app/actions/orders";
+import OrderLineItemsList from "@/components/OrderLineItemsList";
 
 export default function TrackOrderForm() {
   const [result, setResult] = useState<OrderLookupResult | "loading" | null>(null);
@@ -48,6 +49,12 @@ export default function TrackOrderForm() {
               Tracking: {result.tracking_carrier ? `${result.tracking_carrier} — ` : ""}
               {result.tracking_code ?? "—"}
             </p>
+          )}
+          {result.line_items && result.line_items.length > 0 && (
+            <div className="mt-4 border-t border-[var(--border)] pt-4">
+              <p className="text-sm font-semibold text-[var(--foreground)]">Items</p>
+              <OrderLineItemsList items={result.line_items} variant="compact" />
+            </div>
           )}
         </div>
       ) : null}

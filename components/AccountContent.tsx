@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { logout } from "@/app/actions/auth";
 import type { CustomerOrderSummary } from "@/app/actions/orders";
 import OrderStatusBadge from "@/components/OrderStatusBadge";
+
+function thumbUnoptimized(src: string) {
+  return src.includes("/storage/v1/object/public/");
+}
 
 type Tab = "overview" | "orders" | "profile" | "addresses";
 
@@ -150,27 +155,63 @@ export default function AccountContent({
                   You haven&apos;t placed any orders yet. When you do, they&apos;ll appear here.
                 </p>
               ) : (
-                <ul className="mt-4 divide-y divide-[var(--border)] rounded-lg border border-[var(--border)]">
-                  {orders.map((o) => (
-                    <li key={o.id}>
-                      <Link
-                        href={`/account/orders/${o.id}`}
-                        className="flex flex-col gap-2 px-4 py-4 text-sm hover:bg-[var(--muted-bg)] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono font-semibold text-[var(--foreground)]">{o.order_number}</span>
-                          <OrderStatusBadge status={o.status} />
-                        </div>
-                        <span className="text-[var(--muted)]">
-                          {new Date(o.created_at).toLocaleDateString()}
-                        </span>
-                        <span className="font-medium text-[var(--foreground)] sm:ml-auto">
-                          Rs. {Number(o.total).toFixed(2)}
-                        </span>
-                        <span className="w-full text-xs text-[var(--accent)] sm:w-auto">View details →</span>
-                      </Link>
-                    </li>
-                  ))}
+                <ul className="mt-4 space-y-3">
+                  {orders.map((o) => {
+                    const lines = o.line_items ?? [];
+                    const firstWithImage = lines.find((l) => l.image?.trim());
+                    const previewName = lines[0]?.name;
+                    const moreCount = Math.max(0, lines.length - 1);
+                    return (
+                      <li key={o.id}>
+                        <Link
+                          href={`/account/orders/${o.id}`}
+                          className="flex gap-3 rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 transition hover:border-[var(--accent)]/40 hover:bg-[var(--muted-bg)]/50 sm:gap-4 sm:p-4"
+                        >
+                          <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-[var(--muted-bg)] ring-1 ring-[var(--border)] sm:h-24 sm:w-20">
+                            {firstWithImage?.image ? (
+                              <Image
+                                src={firstWithImage.image}
+                                alt={previewName ?? "Order item"}
+                                fill
+                                sizes="80px"
+                                unoptimized={thumbUnoptimized(firstWithImage.image)}
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full items-center justify-center text-xs text-[var(--muted)]" aria-hidden>
+                                —
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-mono text-sm font-semibold text-[var(--foreground)] sm:text-base">
+                                {o.order_number}
+                              </span>
+                              <OrderStatusBadge status={o.status} />
+                            </div>
+                            {previewName && (
+                              <p className="mt-1 line-clamp-2 text-sm text-[var(--foreground)]">
+                                {previewName}
+                                {moreCount > 0 ? (
+                                  <span className="text-[var(--muted)]"> · +{moreCount} more</span>
+                                ) : null}
+                              </p>
+                            )}
+                            <p className="mt-1 text-xs text-[var(--muted)]">
+                              {new Date(o.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end justify-center gap-1">
+                            <span className="text-sm font-bold text-[var(--foreground)] sm:text-base">
+                              Rs. {Number(o.total).toFixed(2)}
+                            </span>
+                            <span className="text-xs font-medium text-[var(--accent)]">View →</span>
+                          </div>
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
