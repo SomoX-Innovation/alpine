@@ -15,6 +15,7 @@ create table if not exists public.products (
   color text,
   sizes jsonb not null default '["S","M","L","XL","XXL"]',
   quantity integer not null default 0 check (quantity >= 0),
+  ordered_quantity integer not null default 0 check (ordered_quantity >= 0),
   image text not null default '',
   images jsonb not null default '[]',
   color_images jsonb not null default '{}'::jsonb,
@@ -26,6 +27,25 @@ create table if not exists public.products (
 create index if not exists products_slug on public.products(slug);
 create index if not exists products_published on public.products(published);
 create index if not exists products_category on public.products(category);
+
+create or replace function public.increment_product_ordered_quantity(p_product_id uuid, p_qty int)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_qty is null or p_qty <= 0 then
+    return;
+  end if;
+  update public.products
+  set ordered_quantity = ordered_quantity + p_qty, updated_at = now()
+  where id = p_product_id;
+end;
+$$;
+
+revoke all on function public.increment_product_ordered_quantity(uuid, int) from public;
+grant execute on function public.increment_product_ordered_quantity(uuid, int) to service_role;
 
 -- Orders (from checkout, for admin and track-order)
 create table if not exists public.orders (

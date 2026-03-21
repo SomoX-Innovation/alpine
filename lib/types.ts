@@ -27,6 +27,8 @@ export type Product = {
   colorImages?: Record<string, string>;
   /** Stock quantity (0 = out of stock) */
   quantity: number;
+  /** Cumulative units ordered (all-time); set from DB when available */
+  orderedQuantity?: number;
 };
 
 /** Fits for filtering / PDP (handles legacy `fit` when `fits` is empty). */

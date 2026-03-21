@@ -5,6 +5,38 @@ import { createServerClient } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase-server";
 import { sendOrderConfirmationEmail } from "@/lib/mail";
 import { SHIPPING_COUNTRY } from "@/lib/currency";
+import { createServiceRoleClient } from "@/lib/supabase-service";
+
+const PRODUCT_ID_UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function incrementProductOrderedQuantities(lineItems: OrderLineItem[]) {
+  const svc = createServiceRoleClient();
+  if (!svc) {
+    console.warn(
+      "[orders] SUPABASE_SERVICE_ROLE_KEY missing — ordered_quantity not updated. Add it for production."
+    );
+    return;
+  }
+  for (const line of lineItems) {
+    const qty = Math.max(0, Math.floor(Number(line.quantity)) || 0);
+    if (qty <= 0) continue;
+    const pid = line.productId?.trim();
+    if (!pid || !PRODUCT_ID_UUID.test(pid)) continue;
+
+    const { error } = await svc.rpc("increment_product_ordered_quantity", {
+      p_product_id: pid,
+      p_qty: qty,
+    });
+    if (error) {
+      console.error(
+        "[orders] increment_product_ordered_quantity",
+        pid,
+        error.message
+      );
+    }
+  }
+}
 
 export type OrderLineItem = {
   productId: string;
@@ -84,6 +116,16 @@ export async function createOrder(input: CreateOrderInput): Promise<{
   if (error) {
     return { error: error.message };
   }
+
+  await incrementProductOrderedQuantities(input.line_items);
+  for (const line of input.line_items) {
+    const pid = line.productId?.trim();
+    if (pid && PRODUCT_ID_UUID.test(pid)) {
+      revalidatePath(`/product/${pid}`);
+    }
+  }
+  revalidatePath("/admin/products");
+  revalidatePath("/");
 
   void sendOrderConfirmationEmail({
     orderNumber: inserted.order_number,

@@ -367,6 +367,22 @@ export default function EditProductForm({ product, categories = [], colors = [] 
         </div>
 
         <div>
+          <span className="block text-sm font-medium text-[var(--foreground)]">
+            Ordered (total units)
+          </span>
+          <p className="mt-1 rounded-md border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-2.5 text-sm text-[var(--foreground)]">
+            {product.ordered_quantity ?? 0}
+          </p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            Increases when customers buy this product. Server needs{" "}
+            <code className="rounded bg-[var(--muted-bg)] px-1 font-mono text-[10px]">
+              SUPABASE_SERVICE_ROLE_KEY
+            </code>{" "}
+            in env.
+          </p>
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-[var(--foreground)]">
             Main image URL (or upload new)
           </label>

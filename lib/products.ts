@@ -7,7 +7,14 @@ const DEFAULT_DESCRIPTION =
 
 const baseProducts: Omit<
   Product,
-  "slug" | "priceFormatted" | "images" | "description" | "sizes" | "quantity" | "fits"
+  | "slug"
+  | "priceFormatted"
+  | "images"
+  | "description"
+  | "sizes"
+  | "quantity"
+  | "fits"
+  | "orderedQuantity"
 >[] = [
   {
     id: "1",
@@ -195,6 +202,7 @@ function toProduct(p: (typeof baseProducts)[0]): Product {
     description: DEFAULT_DESCRIPTION,
     sizes: defaultSizes,
     quantity: 0,
+    orderedQuantity: 0,
   };
 }
 

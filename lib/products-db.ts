@@ -18,6 +18,7 @@ export type ProductRow = {
   color_images: Record<string, string> | null;
   sizes: string[];
   quantity: number;
+  ordered_quantity?: number;
   image: string;
   images: string[];
   published: boolean;
@@ -69,6 +70,8 @@ function rowToProduct(row: ProductRow): Product {
     colors: Array.isArray(row.colors) ? row.colors : [],
     colorImages,
     quantity: typeof row.quantity === "number" ? row.quantity : 0,
+    orderedQuantity:
+      typeof row.ordered_quantity === "number" ? row.ordered_quantity : 0,
   };
 }
 

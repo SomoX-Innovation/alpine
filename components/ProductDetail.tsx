@@ -113,6 +113,12 @@ export default function ProductDetail({ product }: ProductDetailProps) {
               ) : (
                 <span>{product.quantity} in stock</span>
               )}
+              {typeof product.orderedQuantity === "number" &&
+                product.orderedQuantity > 0 && (
+                  <span className="block mt-1">
+                    {product.orderedQuantity} ordered
+                  </span>
+                )}
             </p>
           )}
 

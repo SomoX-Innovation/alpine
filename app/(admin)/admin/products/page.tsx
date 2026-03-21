@@ -44,7 +44,10 @@ export default async function AdminProductsPage() {
                   Price
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
-                  Qty
+                  Stock
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
+                  Ordered
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
                   Badge
@@ -84,6 +87,9 @@ export default async function AdminProductsPage() {
                   </td>
                   <td className="px-4 py-3 text-[var(--muted)]">
                     {p.quantity ?? 0}
+                  </td>
+                  <td className="px-4 py-3 text-[var(--muted)]">
+                    {p.ordered_quantity ?? 0}
                   </td>
                   <td className="px-4 py-3 text-[var(--muted)]">
                     {p.badge ?? "—"}
