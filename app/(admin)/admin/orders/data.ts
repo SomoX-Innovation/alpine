@@ -22,8 +22,14 @@ export type AdminOrderRow = {
   payment_method: string;
 };
 
+/** Safe fragment for ilike pattern (avoid breaking PostgREST `or()` commas). */
 function sanitizeSearch(q: string): string {
-  return q.trim().slice(0, 120).replace(/%/g, "").replace(/_/g, "");
+  return q
+    .trim()
+    .slice(0, 120)
+    .replace(/%/g, "")
+    .replace(/_/g, "")
+    .replace(/,/g, " ");
 }
 
 export async function fetchAdminOrders(

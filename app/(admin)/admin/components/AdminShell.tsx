@@ -34,6 +34,15 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             Dashboard
           </Link>
           <Link
+            href="/admin/orders"
+            className={`block rounded-md px-3 py-2 text-sm font-medium ${pathname?.startsWith("/admin/orders")
+              ? "bg-[var(--muted-bg)] text-[var(--foreground)]"
+              : "text-[var(--muted)] hover:bg-[var(--muted-bg)] hover:text-[var(--foreground)]"
+              }`}
+          >
+            Orders
+          </Link>
+          <Link
             href="/admin/products"
             className={`block rounded-md px-3 py-2 text-sm font-medium ${pathname?.startsWith("/admin/products")
               ? "bg-[var(--muted-bg)] text-[var(--foreground)]"
@@ -68,15 +77,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               }`}
           >
             Colors
-          </Link>
-          <Link
-            href="/admin/orders"
-            className={`block rounded-md px-3 py-2 text-sm font-medium ${pathname?.startsWith("/admin/orders")
-              ? "bg-[var(--muted-bg)] text-[var(--foreground)]"
-              : "text-[var(--muted)] hover:bg-[var(--muted-bg)] hover:text-[var(--foreground)]"
-              }`}
-          >
-            Orders
           </Link>
           <Link
             href="/admin/content"

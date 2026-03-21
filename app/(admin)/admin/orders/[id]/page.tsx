@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getOrderById } from "@/app/actions/orders";
 import OrderDetailForm from "../components/OrderDetailForm";
 import OrderLineItemsList from "@/components/OrderLineItemsList";
+import OrderStatusTimeline from "@/components/OrderStatusTimeline";
+import OrderStatusBadge from "@/components/admin/OrderStatusBadge";
 
 export default async function AdminOrderDetailPage({
   params,
@@ -19,17 +21,28 @@ export default async function AdminOrderDetailPage({
         href="/admin/orders"
         className="text-sm text-[var(--accent)] hover:underline"
       >
-        ← Orders
+        ← Order management
       </Link>
-      <h1 className="mt-4 font-display text-2xl font-semibold text-[var(--foreground)]">
-        Order {order.order_number}
-      </h1>
-      <p className="mt-1 text-sm text-[var(--muted)]">
-        {new Date(order.created_at).toLocaleString()}
-      </p>
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-semibold text-[var(--foreground)]">
+            Order {order.order_number}
+          </h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            {new Date(order.created_at).toLocaleString(undefined, {
+              dateStyle: "full",
+              timeStyle: "short",
+            })}
+          </p>
+        </div>
+        <OrderStatusBadge status={order.status} />
+      </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <div className="space-y-6">
+          <section className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-5">
+            <OrderStatusTimeline status={order.status} />
+          </section>
           <section>
             <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">
               Customer

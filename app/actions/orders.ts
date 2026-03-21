@@ -233,8 +233,11 @@ export async function updateOrder(
     })
     .eq("id", id);
   if (error) return { error: error.message };
+  revalidatePath("/admin");
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${id}`);
+  revalidatePath("/account");
+  revalidatePath(`/account/orders/${id}`);
   return {};
 }
 
