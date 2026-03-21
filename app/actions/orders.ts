@@ -23,7 +23,8 @@ function aggregateNeedByProduct(lineItems: OrderLineItem[]): Map<string, number>
   return map;
 }
 
-async function validateStockBeforeOrder(
+/** Ensures cart lines reference published products (no inventory checks). */
+async function validateProductsBeforeOrder(
   lineItems: OrderLineItem[]
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const need = aggregateNeedByProduct(lineItems);
@@ -37,42 +38,35 @@ async function validateStockBeforeOrder(
   const ids = [...need.keys()];
   const { data: rows, error } = await supabase
     .from("products")
-    .select("id, name, quantity, published")
+    .select("id, name, published")
     .in("id", ids);
   if (error) {
     return { ok: false, error: error.message };
   }
   const byId = new Map(
-    (rows ?? []).map((r: { id: string; name: string; quantity: number; published: boolean }) => [
+    (rows ?? []).map((r: { id: string; name: string; published: boolean }) => [
       r.id,
-      { name: r.name, quantity: r.quantity, published: r.published },
+      { name: r.name, published: r.published },
     ])
   );
-  for (const [pid, requested] of need) {
+  for (const pid of need.keys()) {
     const row = byId.get(pid);
     if (!row || !row.published) {
       return { ok: false, error: "A product in your cart is no longer available." };
-    }
-    const available = typeof row.quantity === "number" ? row.quantity : 0;
-    if (available < requested) {
-      return {
-        ok: false,
-        error: `Not enough stock for "${row.name}". Only ${available} available (you requested ${requested}).`,
-      };
     }
   }
   return { ok: true };
 }
 
 /**
- * Decrements `quantity` and increments `ordered_quantity` in one DB transaction (requires service role).
+ * Increments `ordered_quantity` per product via RPC (requires service role).
  * Returns false if RPC failed (caller should delete the order row).
  */
 async function applyOrderInventoryChanges(lineItems: OrderLineItem[]): Promise<boolean> {
   const svc = createServiceRoleClient();
   if (!svc) {
     console.warn(
-      "[orders] SUPABASE_SERVICE_ROLE_KEY missing — stock and ordered counts not updated. Add it for production."
+      "[orders] SUPABASE_SERVICE_ROLE_KEY missing — ordered counts not updated. Add it for production."
     );
     return true;
   }
@@ -96,7 +90,7 @@ async function deleteOrderById(orderId: string): Promise<void> {
   if (!svc) return;
   const { error } = await svc.from("orders").delete().eq("id", orderId);
   if (error) {
-    console.error("[orders] failed to roll back order after inventory error", orderId, error.message);
+    console.error("[orders] failed to roll back order after ordered-count error", orderId, error.message);
   }
 }
 
@@ -153,9 +147,9 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     return { error: `We only ship to ${SHIPPING_COUNTRY}.` };
   }
 
-  const stockCheck = await validateStockBeforeOrder(input.line_items);
-  if (!stockCheck.ok) {
-    return { error: stockCheck.error };
+  const productCheck = await validateProductsBeforeOrder(input.line_items);
+  if (!productCheck.ok) {
+    return { error: productCheck.error };
   }
 
   const { count } = await supabase.from("orders").select("id", { count: "exact", head: true });
@@ -186,12 +180,12 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     return { error: error.message };
   }
 
-  const inventoryOk = await applyOrderInventoryChanges(input.line_items);
-  if (!inventoryOk) {
+  const orderedOk = await applyOrderInventoryChanges(input.line_items);
+  if (!orderedOk) {
     await deleteOrderById(inserted.id);
     return {
       error:
-        "Stock changed while placing your order. Please refresh the page, review your cart, and try again.",
+        "We couldn’t finalize your order. Please refresh the page and try again.",
     };
   }
 

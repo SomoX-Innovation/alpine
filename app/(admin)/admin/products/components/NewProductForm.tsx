@@ -346,16 +346,21 @@ export default function NewProductForm({ categories = [], colors = [] }: { categ
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-[var(--foreground)]">
-                    Quantity (stock)
+                <label className="block text-sm font-medium text-[var(--foreground)]" htmlFor="ordered_quantity_new">
+                    Starting order count (optional)
                 </label>
                 <input
-                    name="quantity"
+                    id="ordered_quantity_new"
+                    name="ordered_quantity"
                     type="number"
-                    min="0"
-                    className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                    defaultValue="0"
+                    min={0}
+                    step={1}
+                    defaultValue={0}
+                    className="mt-1 w-full max-w-xs rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                 />
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                    Displayed as “X ordered” before real sales. Leave 0 to start from zero.
+                </p>
             </div>
 
             <div className="flex items-center gap-2">

@@ -44,9 +44,6 @@ export default async function AdminProductsPage() {
                   Price
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
-                  Stock
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
                   Ordered
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
@@ -84,9 +81,6 @@ export default async function AdminProductsPage() {
                   <td className="px-4 py-3 text-[var(--muted)]">{p.category}</td>
                   <td className="px-4 py-3 text-[var(--foreground)]">
                     Rs. {Number(p.price).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 text-[var(--muted)]">
-                    {p.quantity ?? 0}
                   </td>
                   <td className="px-4 py-3 text-[var(--muted)]">
                     {p.ordered_quantity ?? 0}

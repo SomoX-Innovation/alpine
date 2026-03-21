@@ -109,7 +109,7 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
   }
   const sizesStr = (formData.get("sizes") as string)?.trim() || "S,M,L,XL,XXL";
   const sizes = sizesStr.split(",").map((s) => s.trim()).filter(Boolean);
-  const quantity = Math.max(0, Math.floor(Number(formData.get("quantity")) || 0));
+  const ordered_quantity = Math.max(0, Math.floor(Number(formData.get("ordered_quantity")) || 0));
   const image = (formData.get("image") as string)?.trim() || "";
   const published = formData.get("published") === "on" || formData.get("published") === "true";
 
@@ -133,7 +133,7 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
       colors,
       color_images: colorImages,
       sizes,
-      quantity,
+      ordered_quantity,
       image: image || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
       images: image ? [image] : [],
       published,
@@ -145,6 +145,7 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
     return { error: error.message };
   }
   revalidatePath("/admin/products");
+  revalidatePath(`/product/${data.id}`);
   revalidatePath("/admin/dtf");
   revalidatePath("/admin");
   revalidatePath("/");
@@ -188,7 +189,7 @@ export async function updateProduct(
   }
   const sizesStr = (formData.get("sizes") as string)?.trim() || "S,M,L,XL,XXL";
   const sizes = sizesStr.split(",").map((s) => s.trim()).filter(Boolean);
-  const quantity = Math.max(0, Math.floor(Number(formData.get("quantity")) || 0));
+  const ordered_quantity = Math.max(0, Math.floor(Number(formData.get("ordered_quantity")) || 0));
   const image = (formData.get("image") as string)?.trim() || "";
   const published = formData.get("published") === "on" || formData.get("published") === "true";
 
@@ -208,7 +209,7 @@ export async function updateProduct(
       colors,
       color_images: colorImages,
       sizes,
-      quantity,
+      ordered_quantity,
       image: image || undefined,
       images: image ? [image] : [],
       published,
@@ -221,6 +222,7 @@ export async function updateProduct(
   }
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${id}/edit`);
+  revalidatePath(`/product/${id}`);
   revalidatePath("/admin/dtf");
   revalidatePath("/admin");
   revalidatePath("/");

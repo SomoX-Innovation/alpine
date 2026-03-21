@@ -20,7 +20,7 @@ export type ProductRow = {
   colors: string[];
   color_images: Record<string, string> | null;
   sizes: string[];
-  quantity: number;
+  quantity?: number;
   ordered_quantity?: number;
   image: string;
   images: string[];
@@ -28,6 +28,18 @@ export type ProductRow = {
   created_at: string;
   updated_at: string;
 };
+
+/** Supabase may return integers as number or string */
+function parseOrderedQuantity(raw: unknown): number {
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return Math.max(0, Math.floor(raw));
+  }
+  if (typeof raw === "string" && raw.trim() !== "") {
+    const n = Number(raw);
+    if (Number.isFinite(n)) return Math.max(0, Math.floor(n));
+  }
+  return 0;
+}
 
 function parseFitsJson(raw: unknown): ProductFit[] {
   if (!Array.isArray(raw)) return [];
@@ -72,9 +84,7 @@ function rowToProduct(row: ProductRow): Product {
     sizes: Array.isArray(row.sizes) ? row.sizes : ["S", "M", "L", "XL", "XXL"],
     colors: Array.isArray(row.colors) ? row.colors : [],
     colorImages,
-    quantity: typeof row.quantity === "number" ? row.quantity : 0,
-    orderedQuantity:
-      typeof row.ordered_quantity === "number" ? row.ordered_quantity : 0,
+    orderedQuantity: parseOrderedQuantity(row.ordered_quantity),
   };
 }
 

@@ -25,9 +25,7 @@ export type Product = {
   colors: string[];
   /** Optional image per color name, e.g. { Black: "https://..." } */
   colorImages?: Record<string, string>;
-  /** Stock quantity (0 = out of stock) */
-  quantity: number;
-  /** Cumulative units ordered (all-time); set from DB when available */
+  /** Cumulative units ordered by customers (all-time); from DB */
   orderedQuantity?: number;
 };
 

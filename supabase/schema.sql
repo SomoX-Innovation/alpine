@@ -162,7 +162,7 @@ create index if not exists customized_orders_created_at on public.customized_ord
 create index if not exists customized_orders_email on public.customized_orders (customer_email);
 
 -- -----------------------------------------------------------------------------
--- Inventory RPC (checkout: decrement stock + increment ordered_quantity, atomic)
+-- Ordered counts RPC (checkout: increment ordered_quantity only — no stock field)
 -- -----------------------------------------------------------------------------
 drop function if exists public.increment_product_ordered_quantity (uuid, int);
 
@@ -191,13 +191,11 @@ begin
     update public.products
     set
       ordered_quantity = ordered_quantity + q,
-      quantity = quantity - q,
       updated_at = now()
-    where id = pid
-      and quantity >= q;
+    where id = pid;
     get diagnostics n = row_count;
     if n <> 1 then
-      raise exception 'insufficient_stock';
+      raise exception 'product_not_found';
     end if;
   end loop;
 end;

@@ -16,11 +16,10 @@ export default function ProductDetail({ product }: ProductDetailProps) {
   );
   const [selectedSize, setSelectedSize] = useState<string>(product.sizes[0] ?? "One Size");
   const [selectedColor, setSelectedColor] = useState<string>(product.colors?.[0] ?? "");
-  const maxQty = typeof product.quantity === "number" ? product.quantity : 999;
-  const [quantity, setQuantity] = useState(Math.min(1, maxQty));
+  const maxQty = 99;
+  const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const { addItem } = useCart();
-  const outOfStock = maxQty === 0;
   const images = product.images.length > 0 ? product.images : [product.image];
   const colorImage = selectedColor ? product.colorImages?.[selectedColor] : undefined;
   const mainImage = colorImage || images[0] || product.image;
@@ -106,21 +105,12 @@ export default function ProductDetail({ product }: ProductDetailProps) {
             )}
           </div>
 
-          {typeof product.quantity === "number" && (
-            <p className="mt-2 text-sm text-[var(--muted)]">
-              {product.quantity === 0 ? (
-                <span className="text-red-500 font-medium">Out of stock</span>
-              ) : (
-                <span>{product.quantity} in stock</span>
-              )}
-              {typeof product.orderedQuantity === "number" &&
-                product.orderedQuantity > 0 && (
-                  <span className="block mt-1">
-                    {product.orderedQuantity} ordered
-                  </span>
-                )}
-            </p>
-          )}
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            <span className="font-medium text-[var(--foreground)]/80">
+              {product.orderedQuantity ?? 0}
+            </span>{" "}
+            ordered by customers
+          </p>
 
           <p className="mt-6 text-[var(--foreground)]/90">{product.description}</p>
 
@@ -204,44 +194,41 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           </div>
 
           {/* Quantity */}
-          {!outOfStock && (
-            <div className="mt-6">
-              <label className="text-sm font-semibold text-[var(--foreground)]">
-                Quantity
-              </label>
-              <div className="mt-2 flex w-32 items-center rounded-md border border-[var(--border)] bg-[var(--card)]">
-                <button
-                  type="button"
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="flex h-10 w-10 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
-                  aria-label="Decrease quantity"
-                >
-                  −
-                </button>
-                <span className="flex-1 text-center text-sm font-medium">
-                  {quantity}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
-                  className="flex h-10 w-10 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
-                  aria-label="Increase quantity"
-                >
-                  +
-                </button>
-              </div>
+          <div className="mt-6">
+            <label className="text-sm font-semibold text-[var(--foreground)]">
+              Quantity
+            </label>
+            <div className="mt-2 flex w-32 items-center rounded-md border border-[var(--border)] bg-[var(--card)]">
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                className="flex h-10 w-10 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
+                aria-label="Decrease quantity"
+              >
+                −
+              </button>
+              <span className="flex-1 text-center text-sm font-medium">
+                {quantity}
+              </span>
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
+                className="flex h-10 w-10 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
+                aria-label="Increase quantity"
+              >
+                +
+              </button>
             </div>
-          )}
+          </div>
 
           {/* Add to cart */}
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <button
               type="button"
               onClick={handleAddToCart}
-              disabled={outOfStock}
               className="flex-1 rounded-md bg-[var(--foreground)] px-6 py-3.5 text-sm font-semibold text-[var(--background)] transition-colors hover:bg-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {outOfStock ? "Out of stock" : added ? "Added to cart" : "Add to cart"}
+              {added ? "Added to cart" : "Add to cart"}
             </button>
             <Link
               href="/cart"

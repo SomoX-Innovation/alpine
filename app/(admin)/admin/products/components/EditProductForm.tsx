@@ -354,31 +354,25 @@ export default function EditProductForm({ product, categories = [], colors = [] 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[var(--foreground)]">
-            Quantity (stock)
+          <label className="block text-sm font-medium text-[var(--foreground)]" htmlFor="ordered_quantity">
+            Order count (storefront)
           </label>
           <input
-            name="quantity"
+            id="ordered_quantity"
+            name="ordered_quantity"
             type="number"
-            min="0"
-            defaultValue={product.quantity ?? 0}
-            className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            min={0}
+            step={1}
+            defaultValue={product.ordered_quantity ?? 0}
+            className="mt-1 w-full max-w-xs rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
           />
-        </div>
-
-        <div>
-          <span className="block text-sm font-medium text-[var(--foreground)]">
-            Ordered (total units)
-          </span>
-          <p className="mt-1 rounded-md border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-2.5 text-sm text-[var(--foreground)]">
-            {product.ordered_quantity ?? 0}
-          </p>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            Increases when customers buy this product. Server needs{" "}
+            Shown as “X ordered” on the store. Set a starting value for new products; real orders add to this
+            when{" "}
             <code className="rounded bg-[var(--muted-bg)] px-1 font-mono text-[10px]">
               SUPABASE_SERVICE_ROLE_KEY
             </code>{" "}
-            in env.
+            is configured.
           </p>
         </div>
 

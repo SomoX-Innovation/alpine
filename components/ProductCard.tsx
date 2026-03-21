@@ -112,10 +112,6 @@ export default function ProductCard({ product }: ProductCardProps) {
         <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
           {product.category}
           {product.colors && product.colors.length > 0 ? ` · ${product.colors.join(", ")}` : ""}
-          <span className={product.quantity === 0 ? "text-red-500" : ""}>
-            {" "}
-            · {product.quantity === 0 ? "Out of stock" : `${product.quantity} in stock`}
-          </span>
         </p>
         <h3 className="font-display text-lg font-medium text-[var(--foreground)] group-hover:text-[var(--accent)]">
           {product.name}
@@ -126,6 +122,9 @@ export default function ProductCard({ product }: ProductCardProps) {
             <span className="text-xs text-[var(--muted)] line-through">Rs.{product.compareAtPrice}</span>
           )}
         </div>
+        <p className="mt-1 text-xs uppercase tracking-wider text-[var(--muted)]">
+          {product.orderedQuantity ?? 0} ordered
+        </p>
       </div>
     </Link>
   );

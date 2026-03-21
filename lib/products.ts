@@ -12,7 +12,6 @@ const baseProducts: Omit<
   | "images"
   | "description"
   | "sizes"
-  | "quantity"
   | "fits"
   | "orderedQuantity"
 >[] = [
@@ -201,7 +200,6 @@ function toProduct(p: (typeof baseProducts)[0]): Product {
     images: [p.image],
     description: DEFAULT_DESCRIPTION,
     sizes: defaultSizes,
-    quantity: 0,
     orderedQuantity: 0,
   };
 }
