@@ -2,32 +2,42 @@
 
 Auth emails are sent **by Supabase**, not by `lib/mail.ts`. Order confirmation emails use Gmail SMTP in the app; **signup and password reset** use Supabase’s mail settings.
 
-## Confirmation links show `localhost:3000` (or land on `/?code=...`)
+---
 
-Emails use **Supabase → Authentication → URL Configuration → Site URL**. If that is still `http://localhost:3000`, every confirmation link will point at your laptop, not your live site.
+## STOP: emails still show `http://localhost:3000/?code=...`
 
-**Fix (production):**
+**Setting `NEXT_PUBLIC_SITE_URL` in Vercel alone does *not* fix the link in the email.**  
+Supabase builds that URL from **its own dashboard setting**, not from your Next.js env.
 
-1. **Supabase Dashboard → Authentication → URL Configuration**
-   - Set **Site URL** to your live site, e.g. `https://alpineleafclothing.online` (no trailing slash).
-   - Under **Redirect URLs**, add:
-     - `https://alpineleafclothing.online/**`
-     - `https://alpineleafclothing.online/auth/callback`
-     - `https://alpineleafclothing.online/reset-password`
-2. **Hosting env (e.g. Vercel)** — set:
-   - `NEXT_PUBLIC_SITE_URL=https://alpineleafclothing.online`
-   Redeploy after saving.
-3. **Request a new email** — old emails already generated with localhost will not change; sign up again or use “Resend confirmation” after the settings above.
+### You must change this in Supabase (same project as your keys)
 
-This app also redirects `https://yoursite.com/?code=...` → `/auth/callback?...` in middleware, so links that open the home page with a `code` still complete login.
+1. Open **[Supabase Dashboard](https://supabase.com/dashboard)** → select the **exact project** whose URL matches `NEXT_PUBLIC_SUPABASE_URL` in Vercel.
+2. Go to **Authentication** (left sidebar) → **URL Configuration** (not “API” or “Database”).
+3. **Site URL** — set to your live site, **exactly**:
+   - `https://alpineleafclothing.online`  
+   - No trailing slash. **Not** `http://localhost:3000`.
+4. Click **Save**.
+5. Under **Redirect URLs**, add (if not already there):
+   - `https://alpineleafclothing.online/**`
+   - `https://alpineleafclothing.online/auth/callback`
+   - `https://alpineleafclothing.online/reset-password`
+6. **Authentication → Email templates → Confirm signup** — body should use **`{{ .ConfirmationURL }}`**. If you edited the template and pasted `localhost`, remove that and use the variable again.
+7. **Vercel** → Environment Variables → `NEXT_PUBLIC_SITE_URL=https://alpineleafclothing.online` → **Redeploy**.
+8. Trigger a **new** email (sign up again or **Resend confirmation**). Old emails never update.
+
+### Why this happens
+
+- The `?code=...` link is Supabase’s **PKCE** redirect. The **host** (`localhost` vs your domain) comes from **Site URL** in step 3.
+- Signing up **on your laptop** (`localhost:3000`) while Site URL is still localhost will also produce localhost links — after fixing Site URL, test signup on **https://alpineleafclothing.online/register**.
+
+This app also redirects `https://yoursite.com/?code=...` → `/auth/callback?...` in middleware, so if the host is correct but the path is `/`, login still works.
 
 ## Resend confirmation email
 
 If a user didn’t receive the signup email, they can use **Resend confirmation email** on:
 
 - The **Register** success screen (after creating an account)
-- **Sign in** — section at the bottom (enter the registered email)
-- **My account** — yellow banner when the address isn’t confirmed yet
+- **My account** — yellow banner when the address isn’t confirmed yet (signed in but email not verified)
 
 This calls Supabase `auth.resend({ type: 'signup', ... })` (see `resendConfirmationEmail` in `app/actions/auth.ts`). Supabase may rate-limit repeated sends.
 
