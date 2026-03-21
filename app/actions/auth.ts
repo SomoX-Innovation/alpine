@@ -132,3 +132,34 @@ export async function sendPasswordResetEmail(formData: FormData) {
   return { success: true };
 }
 
+/** Resend signup confirmation email (Supabase rate-limits; same redirect as register). */
+export async function resendConfirmationEmail(formData: FormData) {
+  const email = getRequiredString(formData, "email");
+  if (!email) {
+    return { error: "Email is required." };
+  }
+
+  const siteUrl = await getSiteUrl();
+  if (!siteUrl) {
+    return {
+      error:
+        "Unable to determine site URL. Set NEXT_PUBLIC_SITE_URL (e.g. https://yourdomain.com).",
+    };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: {
+      emailRedirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent("/account")}`,
+    },
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/account");
+  return { success: true };
+}

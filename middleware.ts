@@ -3,6 +3,20 @@ import { NextResponse, type NextRequest } from "next/server"
 import { isUserInAdminTable } from "@/lib/admin-auth"
 
 export async function middleware(request: NextRequest) {
+  /**
+   * Supabase sometimes sends users to `/?code=...` (Site URL root) instead of `/auth/callback`.
+   * Forward PKCE / OTP params so the session exchange still runs.
+   */
+  const { pathname, searchParams } = request.nextUrl
+  if (
+    pathname === "/" &&
+    (searchParams.has("code") || searchParams.has("token_hash"))
+  ) {
+    const url = request.nextUrl.clone()
+    url.pathname = "/auth/callback"
+    return NextResponse.redirect(url)
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })

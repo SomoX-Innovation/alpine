@@ -5,22 +5,26 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { register } from "@/app/actions/auth";
 import PasswordInput from "@/components/PasswordInput";
+import ResendConfirmationEmail from "@/components/ResendConfirmationEmail";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     const form = e.currentTarget;
     const formData = new FormData(form);
+    const email = (formData.get("email") as string)?.trim() ?? "";
     const result = await register(formData);
     if (result?.error) {
       setError(result.error);
       return;
     }
+    setRegisteredEmail(email);
     setSent(true);
   }
 
@@ -35,10 +39,21 @@ export default function RegisterPage() {
         </p>
 
         {sent ? (
-          <div className="mt-6 space-y-3">
+          <div className="mt-6 space-y-4">
             <p className="rounded-md bg-[var(--muted-bg)] px-3 py-2 text-sm text-[var(--foreground)]">
-              If confirmation is required, check your email for the verification link.
+              If confirmation is required, check your email for the verification link
+              {registeredEmail ? (
+                <>
+                  {" "}
+                  sent to <span className="font-medium">{registeredEmail}</span>.
+                </>
+              ) : (
+                "."
+              )}
             </p>
+            {registeredEmail ? (
+              <ResendConfirmationEmail email={registeredEmail} />
+            ) : null}
             <button
               type="button"
               onClick={() => router.push("/login")}

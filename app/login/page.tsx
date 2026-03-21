@@ -6,9 +6,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { login } from "@/app/actions/auth";
 import PasswordInput from "@/components/PasswordInput";
 import { safeRedirectPath } from "@/lib/safe-redirect";
+import ResendConfirmationEmail from "@/components/ResendConfirmationEmail";
 
 function LoginForm() {
   const [error, setError] = useState<string | null>(null);
+  const [resendEmail, setResendEmail] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
   const reset = searchParams.get("reset");
@@ -110,6 +112,28 @@ function LoginForm() {
           <Link href="/register" className="text-[var(--accent)] hover:underline">
             Register
           </Link>
+        </div>
+
+        <div className="mt-8 border-t border-[var(--border)] pt-6">
+          <p className="text-sm font-medium text-[var(--foreground)]">{`Didn't receive the confirmation email?`}</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            Enter the email you used to register, then resend the link.
+          </p>
+          <label htmlFor="resend-email" className="mt-3 block text-sm font-medium text-[var(--foreground)]">
+            Email
+          </label>
+          <input
+            id="resend-email"
+            type="email"
+            autoComplete="email"
+            value={resendEmail}
+            onChange={(e) => setResendEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          />
+          <div className="mt-3">
+            <ResendConfirmationEmail email={resendEmail.trim()} />
+          </div>
         </div>
       </div>
     </div>

@@ -12,6 +12,7 @@ import {
 } from "@/app/actions/account";
 import { SHIPPING_COUNTRY } from "@/lib/currency";
 import OrderStatusBadge from "@/components/OrderStatusBadge";
+import ResendConfirmationEmail from "@/components/ResendConfirmationEmail";
 
 function thumbUnoptimized(src: string) {
   return src.includes("/storage/v1/object/public/");
@@ -290,11 +291,14 @@ export default function AccountContent({
         </nav>
 
         <div className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--card)] p-6">
-          {needsEmailConfirmation && (
-            <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-[var(--foreground)]">
+          {needsEmailConfirmation && userEmail && (
+            <div className="mb-6 rounded-md border border-yellow-500/30 bg-yellow-500/10 px-4 py-4 text-[var(--foreground)]">
               <div className="font-semibold">Confirm your email</div>
               <div className="mt-1 text-sm text-[var(--muted)]">
                 Please visit your mailbox and confirm your email address to activate your account.
+              </div>
+              <div className="mt-4 max-w-md">
+                <ResendConfirmationEmail email={userEmail} />
               </div>
             </div>
           )}
