@@ -7,10 +7,26 @@ import { updateProduct, deleteProduct, uploadProductImage } from "../../actions/
 import type { ProductRow } from "@/lib/products-db";
 import type { CategoryRow } from "@/lib/categories-db";
 import type { ColorRow } from "@/lib/colors-db";
+import type { ProductFit } from "@/lib/types";
+
+function initialFitsFromRow(p: ProductRow): ProductFit[] {
+  const raw = p.fits;
+  if (Array.isArray(raw)) {
+    const out: ProductFit[] = [];
+    for (const x of raw) {
+      if (x === "Oversize" || x === "Regular") out.push(x);
+    }
+    const uniq = [...new Set(out)];
+    if (uniq.length) return uniq;
+  }
+  if (p.fit === "Oversize" || p.fit === "Regular") return [p.fit];
+  return [];
+}
 
 export default function EditProductForm({ product, categories = [], colors = [] }: { product: ProductRow, categories: CategoryRow[], colors: ColorRow[] }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [selectedFits, setSelectedFits] = useState<ProductFit[]>(() => initialFitsFromRow(product));
   const [imageUrl, setImageUrl] = useState(product.image);
   const [selectedColors, setSelectedColors] = useState<string[]>(Array.isArray(product.colors) ? product.colors : []);
   const [colorImages, setColorImages] = useState<Record<string, string>>(
@@ -47,6 +63,8 @@ export default function EditProductForm({ product, categories = [], colors = [] 
     const formData = new FormData(form);
     formData.delete("colors");
     selectedColors.forEach((c) => formData.append("colors", c));
+    formData.delete("fits");
+    selectedFits.forEach((f) => formData.append("fits", f));
     formData.set("color_images", JSON.stringify(colorImages));
     formData.set("image", imageUrl);
     const result = await updateProduct(product.id, formData);
@@ -56,6 +74,12 @@ export default function EditProductForm({ product, categories = [], colors = [] 
     }
     router.push("/admin/products");
     router.refresh();
+  }
+
+  function toggleFit(fit: ProductFit) {
+    setSelectedFits((prev) =>
+      prev.includes(fit) ? prev.filter((x) => x !== fit) : [...prev, fit]
+    );
   }
 
   function toggleColor(colorName: string) {
@@ -238,18 +262,32 @@ export default function EditProductForm({ product, categories = [], colors = [] 
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-[var(--foreground)]">
+            <span className="block text-sm font-medium text-[var(--foreground)]">
               Fit (for filtering only)
-            </label>
-            <select
-              name="fit"
-              defaultValue={product.fit ?? ""}
-              className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-            >
-              <option value="">—</option>
-              <option value="Oversize">Oversize</option>
-              <option value="Regular">Regular</option>
-            </select>
+            </span>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Select one or both. Color images apply to every selected fit—no separate images per fit.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-4">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={selectedFits.includes("Regular")}
+                  onChange={() => toggleFit("Regular")}
+                  className="rounded border-[var(--border)]"
+                />
+                <span className="text-sm text-[var(--foreground)]">Regular</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={selectedFits.includes("Oversize")}
+                  onChange={() => toggleFit("Oversize")}
+                  className="rounded border-[var(--border)]"
+                />
+                <span className="text-sm text-[var(--foreground)]">Oversize</span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -278,6 +316,9 @@ export default function EditProductForm({ product, categories = [], colors = [] 
             <label className="block text-sm font-medium text-[var(--foreground)]">
               Color-wise images
             </label>
+            <p className="text-xs text-[var(--muted)]">
+              One image per color is used for all selected fits (Regular and/or Oversize).
+            </p>
             {selectedColors.map((colorName) => (
               <div key={colorName} className="rounded-md border border-[var(--border)] p-3">
                 <p className="text-sm font-medium text-[var(--foreground)]">{colorName}</p>

@@ -5,11 +5,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { CURRENCY } from "@/lib/currency";
-import type { Product } from "@/lib/types";
+import { productFitList, type Product, type ProductFit } from "@/lib/types";
 
 type ProductDetailProps = { product: Product };
 
 export default function ProductDetail({ product }: ProductDetailProps) {
+  const fitsList = productFitList(product);
+  const [selectedFit, setSelectedFit] = useState<ProductFit | null>(
+    fitsList.length >= 1 ? fitsList[0] : null
+  );
   const [selectedSize, setSelectedSize] = useState<string>(product.sizes[0] ?? "One Size");
   const [selectedColor, setSelectedColor] = useState<string>(product.colors?.[0] ?? "");
   const maxQty = typeof product.quantity === "number" ? product.quantity : 999;
@@ -27,9 +31,10 @@ export default function ProductDetail({ product }: ProductDetailProps) {
       productId: product.id,
       name: product.name,
       price: product.price,
-      image: product.image,
+      image: mainImage,
       size: selectedSize,
       quantity,
+      ...(selectedFit ? { fit: selectedFit } : {}),
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
@@ -112,6 +117,32 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           )}
 
           <p className="mt-6 text-[var(--foreground)]/90">{product.description}</p>
+
+          {fitsList.length > 1 && (
+            <div className="mt-8">
+              <label className="text-sm font-semibold text-[var(--foreground)]">
+                Fit
+              </label>
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                Same photos apply to every fit; choose how you want this item listed in your order.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {fitsList.map((fit) => (
+                  <button
+                    key={fit}
+                    type="button"
+                    onClick={() => setSelectedFit(fit)}
+                    className={`rounded-md border px-4 py-2.5 text-sm font-medium transition-colors ${selectedFit === fit
+                      ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]"
+                      : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:border-[var(--accent)]"
+                      }`}
+                  >
+                    {fit}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {product.colors?.length > 0 && (
             <div className="mt-8">

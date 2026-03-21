@@ -11,6 +11,7 @@ create table if not exists public.products (
   category text not null check (category in ('Women', 'Men', 'Unisex', 'DTF')),
   badge text check (badge is null or badge in ('New', 'Sale')),
   fit text check (fit is null or fit in ('Oversize', 'Regular')),
+  fits jsonb not null default '[]'::jsonb,
   color text,
   sizes jsonb not null default '["S","M","L","XL","XXL"]',
   quantity integer not null default 0 check (quantity >= 0),
@@ -33,6 +34,7 @@ create table if not exists public.orders (
   status text not null default 'pending' check (status in ('pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled')),
   customer_email text not null,
   customer_name text not null,
+  user_id uuid references auth.users (id) on delete set null,
   shipping_address jsonb not null default '{}',
   line_items jsonb not null default '[]',
   subtotal numeric not null,
@@ -48,6 +50,7 @@ create table if not exists public.orders (
 create index if not exists orders_order_number on public.orders(order_number);
 create index if not exists orders_customer_email on public.orders(customer_email);
 create index if not exists orders_created_at on public.orders(created_at desc);
+create index if not exists orders_user_id on public.orders(user_id);
 
 -- Customized DTF t-shirt orders
 create table if not exists public.customized_orders (

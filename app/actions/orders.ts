@@ -2,6 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerClient } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-server";
+import { sendOrderConfirmationEmail } from "@/lib/mail";
+import { SHIPPING_COUNTRY } from "@/lib/currency";
 
 export type OrderLineItem = {
   productId: string;
@@ -9,12 +12,15 @@ export type OrderLineItem = {
   size: string;
   quantity: number;
   price: number;
+  /** Regular / Oversize when applicable */
+  fit?: string;
 };
 
 export type PaymentMethod = "card" | "cod";
 
 export type CreateOrderInput = {
-  customer_email: string;
+  /** Ignored for security — order is tied to the signed-in user’s email. */
+  customer_email?: string;
   customer_name: string;
   shipping_address: {
     address: string;
@@ -30,36 +36,74 @@ export type CreateOrderInput = {
   payment_method?: PaymentMethod;
 };
 
-export async function createOrder(input: CreateOrderInput): Promise<{ order_number?: string; error?: string }> {
-  const supabase = createServerClient();
-  if (!supabase) {
-    return { error: "Orders are not available. Please try again later." };
+export async function createOrder(input: CreateOrderInput): Promise<{
+  order_number?: string;
+  order_id?: string;
+  error?: string;
+}> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) {
+    return { error: "You must be signed in to place an order. Please sign in and try again." };
   }
+
+  const customer_email = user.email.trim().toLowerCase();
+  const customer_name = input.customer_name.trim() || user.email.split("@")[0] || "Customer";
+
+  const country = input.shipping_address.country?.trim() ?? "";
+  if (country !== SHIPPING_COUNTRY) {
+    return { error: `We only ship to ${SHIPPING_COUNTRY}.` };
+  }
+
   const { count } = await supabase.from("orders").select("id", { count: "exact", head: true });
   const order_number = `ALP-${1001 + (count ?? 0)}`;
 
   const paymentMethod: PaymentMethod = input.payment_method === "cod" ? "cod" : "card";
   const status = paymentMethod === "cod" ? "pending" : "paid";
 
-  const { error } = await supabase.from("orders").insert({
-    order_number,
-    status,
-    customer_email: input.customer_email.trim().toLowerCase(),
-    customer_name: input.customer_name,
-    shipping_address: input.shipping_address,
-    line_items: input.line_items,
-    subtotal: input.subtotal,
-    shipping_cost: input.shipping_cost,
-    total: input.total,
-    payment_method: paymentMethod,
-  });
+  const { data: inserted, error } = await supabase
+    .from("orders")
+    .insert({
+      order_number,
+      status,
+      user_id: user.id,
+      customer_email,
+      customer_name,
+      shipping_address: input.shipping_address,
+      line_items: input.line_items,
+      subtotal: input.subtotal,
+      shipping_cost: input.shipping_cost,
+      total: input.total,
+      payment_method: paymentMethod,
+    })
+    .select("id, order_number")
+    .single();
 
   if (error) {
     return { error: error.message };
   }
+
+  void sendOrderConfirmationEmail({
+    orderNumber: inserted.order_number,
+    orderId: inserted.id,
+    customerEmail: customer_email,
+    customerName: customer_name,
+    input: {
+      line_items: input.line_items,
+      subtotal: input.subtotal,
+      shipping_cost: input.shipping_cost,
+      total: input.total,
+      shipping_address: input.shipping_address,
+    },
+  });
+
   revalidatePath("/admin");
   revalidatePath("/admin/orders");
-  return { order_number };
+  revalidatePath("/account");
+  revalidatePath(`/account/orders/${inserted.id}`);
+  return { order_number: inserted.order_number, order_id: inserted.id };
 }
 
 export async function updateOrder(
@@ -129,6 +173,53 @@ export async function getOrderById(id: string): Promise<OrderDetail | null> {
   const supabase = createServerClient();
   if (!supabase) return null;
   const { data, error } = await supabase.from("orders").select("*").eq("id", id).single();
+  if (error || !data) return null;
+  return data as OrderDetail;
+}
+
+export type CustomerOrderSummary = {
+  id: string;
+  order_number: string;
+  created_at: string;
+  status: string;
+  total: number;
+};
+
+/** Orders for the currently signed-in customer (same email as account). */
+export async function getMyOrders(): Promise<CustomerOrderSummary[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return [];
+
+  const email = user.email.trim().toLowerCase();
+  const { data, error } = await supabase
+    .from("orders")
+    .select("id, order_number, created_at, status, total")
+    .eq("customer_email", email)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data as CustomerOrderSummary[];
+}
+
+/** Single order for customer if it belongs to their email. */
+export async function getCustomerOrderById(id: string): Promise<OrderDetail | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return null;
+
+  const email = user.email.trim().toLowerCase();
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("id", id)
+    .eq("customer_email", email)
+    .single();
+
   if (error || !data) return null;
   return data as OrderDetail;
 }

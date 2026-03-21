@@ -2,8 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerClient } from "@/lib/supabase";
+import type { ProductFit } from "@/lib/types";
 
 const BUCKET = "product-images";
+
+function parseFitsFromForm(formData: FormData): ProductFit[] {
+  const raw = formData.getAll("fits").map((x) => String(x).trim());
+  const set = new Set<ProductFit>();
+  for (const r of raw) {
+    if (r === "Oversize" || r === "Regular") set.add(r);
+  }
+  return Array.from(set);
+}
 
 function normalizeSlug(value: string): string {
   return value
@@ -79,8 +89,8 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
   const compareAtPrice = compareAtPriceRaw ? Number(compareAtPriceRaw) : null;
   const category = (formData.get("category") as string) || "Unisex";
   const badge = (formData.get("badge") as string) || null;
-  const fitRaw = (formData.get("fit") as string)?.trim() || null;
-  const fit = fitRaw === "Oversize" || fitRaw === "Regular" ? fitRaw : null;
+  const fits = parseFitsFromForm(formData);
+  const fit = fits[0] ?? null;
   const item_code = (formData.get("item_code") as string)?.trim() || null;
   const colors = formData.getAll("colors").map((c) => String(c).trim()).filter(Boolean);
   const colorImagesRaw = (formData.get("color_images") as string)?.trim() || "{}";
@@ -118,6 +128,7 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
       category: category as "Women" | "Men" | "Unisex" | "DTF",
       badge: badge === "New" || badge === "Sale" ? badge : null,
       fit,
+      fits,
       item_code,
       colors,
       color_images: colorImages,
@@ -157,8 +168,8 @@ export async function updateProduct(
   const compareAtPrice = compareAtPriceRaw ? Number(compareAtPriceRaw) : null;
   const category = (formData.get("category") as string) || "Unisex";
   const badge = (formData.get("badge") as string) || null;
-  const fitRaw = (formData.get("fit") as string)?.trim() || null;
-  const fit = fitRaw === "Oversize" || fitRaw === "Regular" ? fitRaw : null;
+  const fits = parseFitsFromForm(formData);
+  const fit = fits[0] ?? null;
   const item_code = (formData.get("item_code") as string)?.trim() || null;
   const colors = formData.getAll("colors").map((c) => String(c).trim()).filter(Boolean);
   const colorImagesRaw = (formData.get("color_images") as string)?.trim() || "{}";
@@ -192,6 +203,7 @@ export async function updateProduct(
       category: category as "Women" | "Men" | "Unisex" | "DTF",
       badge: badge === "New" || badge === "Sale" ? badge : null,
       fit,
+      fits,
       item_code,
       colors,
       color_images: colorImages,

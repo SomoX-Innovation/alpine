@@ -7,7 +7,7 @@ const DEFAULT_DESCRIPTION =
 
 const baseProducts: Omit<
   Product,
-  "slug" | "priceFormatted" | "images" | "description" | "sizes" | "quantity"
+  "slug" | "priceFormatted" | "images" | "description" | "sizes" | "quantity" | "fits"
 >[] = [
   {
     id: "1",
@@ -188,6 +188,7 @@ function toProduct(p: (typeof baseProducts)[0]): Product {
     (p.colors && p.colors.length > 0 ? `-${p.colors.join("-").toLowerCase().replace(/\s+/g, "-")}` : "");
   return {
     ...p,
+    fits: [],
     slug,
     priceFormatted: CURRENCY.format(p.price),
     images: [p.image],

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase-server"
-import { headers } from "next/headers"
+import { getSiteUrl } from "@/lib/site-url"
 
 export async function login(formData: FormData) {
   const email = formData.get("email") as string
@@ -35,14 +35,17 @@ export async function sendPasswordResetEmail(formData: FormData) {
     return { error: "Email is required." }
   }
 
-  const supabase = await createClient()
-  const origin = (await headers()).get("origin")
-  if (!origin) {
-    return { error: "Unable to determine site URL." }
+  const siteUrl = await getSiteUrl()
+  if (!siteUrl) {
+    return {
+      error:
+        "Unable to determine site URL. Set NEXT_PUBLIC_SITE_URL (e.g. https://yourdomain.com).",
+    }
   }
 
+  const supabase = await createClient()
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/admin/login?reset=1`,
+    redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent("/reset-password?redirect=/admin/login")}`,
   })
 
   if (error) {

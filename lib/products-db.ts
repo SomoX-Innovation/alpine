@@ -12,6 +12,7 @@ export type ProductRow = {
   category: string;
   badge: string | null;
   fit: string | null;
+  fits?: unknown;
   item_code: string | null;
   colors: string[];
   color_images: Record<string, string> | null;
@@ -24,7 +25,22 @@ export type ProductRow = {
   updated_at: string;
 };
 
+function parseFitsJson(raw: unknown): ProductFit[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ProductFit[] = [];
+  for (const x of raw) {
+    if (x === "Oversize" || x === "Regular") out.push(x);
+  }
+  return [...new Set(out)];
+}
+
 function rowToProduct(row: ProductRow): Product {
+  const legacyFit =
+    row.fit === "Oversize" || row.fit === "Regular" ? (row.fit as ProductFit) : undefined;
+  const fitsFromJson = parseFitsJson(row.fits ?? null);
+  const fits =
+    fitsFromJson.length > 0 ? fitsFromJson : legacyFit ? [legacyFit] : [];
+
   const colorImages =
     row.color_images && typeof row.color_images === "object"
       ? Object.fromEntries(
@@ -45,7 +61,8 @@ function rowToProduct(row: ProductRow): Product {
     image: row.image,
     images: Array.isArray(row.images) ? row.images : [row.image],
     badge: row.badge === "New" || row.badge === "Sale" ? row.badge : undefined,
-    fit: row.fit === "Oversize" || row.fit === "Regular" ? (row.fit as ProductFit) : undefined,
+    fits,
+    fit: fits.length === 1 ? fits[0] : undefined,
     itemCode: row.item_code ?? undefined,
     description: row.description ?? "",
     sizes: Array.isArray(row.sizes) ? row.sizes : ["S", "M", "L", "XL", "XXL"],

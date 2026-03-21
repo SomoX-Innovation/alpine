@@ -3,30 +3,33 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { createOrder } from "@/app/actions/orders";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, SHIPPING_COUNTRY } from "@/lib/currency";
 
-export default function CheckoutContent() {
+type CheckoutContentProps = {
+  userEmail: string;
+};
+
+export default function CheckoutContent({ userEmail }: CheckoutContentProps) {
+  const router = useRouter();
   const { items, clearCart } = useCart();
   const [step, setStep] = useState<"shipping" | "payment" | "confirmation">("shipping");
-  const [placed, setPlaced] = useState(false);
-  const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [shippingData, setShippingData] = useState({
-    email: "",
     firstName: "",
     lastName: "",
     address: "",
     city: "",
     postalCode: "",
-    country: "",
+    country: SHIPPING_COUNTRY,
   });
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const shipping = subtotal >= CURRENCY.freeShippingThreshold ? 0 : CURRENCY.shippingCost;
   const total = subtotal + shipping;
 
-  if (items.length === 0 && !placed) {
+  if (items.length === 0) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 text-center">
         <h1 className="font-display text-2xl font-semibold text-[var(--foreground)]">
@@ -37,46 +40,6 @@ export default function CheckoutContent() {
           className="mt-4 inline-block text-[var(--accent)] hover:underline"
         >
           Return to cart
-        </Link>
-      </div>
-    );
-  }
-
-  if (placed) {
-    return (
-      <div className="mx-auto max-w-xl px-4 py-16 text-center">
-        <div className="rounded-full bg-[var(--muted-bg)] p-4 inline-block mb-6">
-          <svg
-            className="h-12 w-12 text-[var(--accent)]"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-        </div>
-        <h1 className="font-display text-2xl font-semibold text-[var(--foreground)]">
-          Thank you for your order
-        </h1>
-        {orderNumber && (
-          <p className="mt-2 font-medium text-[var(--foreground)]">
-            Order number: <span className="font-mono">{orderNumber}</span>
-          </p>
-        )}
-        <p className="mt-2 text-[var(--muted)]">
-          You chose <strong>Cash on Delivery</strong>. Please keep the exact amount ready when your order arrives.
-          We&apos;ll confirm by email. You can track your order with the order number above.
-        </p>
-        <Link
-          href="/"
-          className="mt-8 inline-flex rounded-md bg-[var(--foreground)] px-6 py-3 text-sm font-semibold text-[var(--background)] hover:bg-[var(--accent)]"
-        >
-          Continue shopping
         </Link>
       </div>
     );
@@ -93,6 +56,9 @@ export default function CheckoutContent() {
       <h1 className="font-display mt-4 text-2xl font-semibold text-[var(--foreground)] sm:text-3xl">
         Checkout
       </h1>
+      <p className="mt-2 text-sm text-[var(--muted)]">
+        Signed in as <span className="font-medium text-[var(--foreground)]">{userEmail}</span>
+      </p>
 
       {/* Steps */}
       <div className="mt-6 flex gap-4 border-b border-[var(--border)]">
@@ -129,28 +95,19 @@ export default function CheckoutContent() {
                 e.preventDefault();
                 const form = e.currentTarget;
                 setShippingData({
-                  email: (form.querySelector('[name="email"]') as HTMLInputElement).value,
                   firstName: (form.querySelector('[name="firstName"]') as HTMLInputElement).value,
                   lastName: (form.querySelector('[name="lastName"]') as HTMLInputElement).value,
                   address: (form.querySelector('[name="address"]') as HTMLInputElement).value,
                   city: (form.querySelector('[name="city"]') as HTMLInputElement).value,
                   postalCode: (form.querySelector('[name="postalCode"]') as HTMLInputElement).value,
-                  country: (form.querySelector('[name="country"]') as HTMLSelectElement).value,
+                  country: (form.querySelector('[name="country"]') as HTMLInputElement).value,
                 });
                 setStep("payment");
               }}
             >
-              <div>
-                <label className="block text-sm font-medium text-[var(--foreground)]">
-                  Email
-                </label>
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                  placeholder="you@example.com"
-                />
+              <div className="rounded-md border border-[var(--border)] bg-[var(--muted-bg)]/40 px-4 py-3 text-sm">
+                <span className="text-[var(--muted)]">Order email (your account)</span>
+                <p className="mt-1 font-medium text-[var(--foreground)]">{userEmail}</p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -216,22 +173,11 @@ export default function CheckoutContent() {
                 <label className="block text-sm font-medium text-[var(--foreground)]">
                   Country
                 </label>
-                <select
-                  name="country"
-                  required
-                  className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                >
-                  <option value="">Select country</option>
-                  <option value="DE">Germany</option>
-                  <option value="FR">France</option>
-                  <option value="IT">Italy</option>
-                  <option value="ES">Spain</option>
-                  <option value="NL">Netherlands</option>
-                  <option value="BE">Belgium</option>
-                  <option value="AT">Austria</option>
-                  <option value="PL">Poland</option>
-                  <option value="GB">United Kingdom</option>
-                </select>
+                <input type="hidden" name="country" value={SHIPPING_COUNTRY} />
+                <p className="mt-1 rounded-md border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-2.5 text-sm text-[var(--foreground)]">
+                  {SHIPPING_COUNTRY}
+                  <span className="ml-2 text-[var(--muted)]">(we ship within Sri Lanka only)</span>
+                </p>
               </div>
               <button
                 type="submit"
@@ -249,7 +195,6 @@ export default function CheckoutContent() {
                 e.preventDefault();
                 setError(null);
                 const result = await createOrder({
-                  customer_email: shippingData.email,
                   customer_name: `${shippingData.firstName} ${shippingData.lastName}`.trim(),
                   shipping_address: {
                     address: shippingData.address,
@@ -263,6 +208,7 @@ export default function CheckoutContent() {
                     size: i.size,
                     quantity: i.quantity,
                     price: i.price,
+                    ...(i.fit ? { fit: i.fit } : {}),
                   })),
                   subtotal,
                   shipping_cost: shipping,
@@ -273,9 +219,11 @@ export default function CheckoutContent() {
                   setError(result.error);
                   return;
                 }
-                if (result.order_number) setOrderNumber(result.order_number);
                 clearCart();
-                setPlaced(true);
+                if (result.order_id) {
+                  router.push(`/account/orders/${result.order_id}?placed=1`);
+                  router.refresh();
+                }
               }}
             >
               {error && (
@@ -328,7 +276,7 @@ export default function CheckoutContent() {
             <ul className="mt-4 max-h-64 space-y-3 overflow-y-auto">
               {items.map((item) => (
                 <li
-                  key={`${item.productId}-${item.size}`}
+                  key={`${item.productId}-${item.size}-${item.fit ?? ""}`}
                   className="flex gap-3"
                 >
                   <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded bg-[var(--muted-bg)]">
@@ -346,7 +294,8 @@ export default function CheckoutContent() {
                       {item.name}
                     </p>
                     <p className="text-xs text-[var(--muted)]">
-                      {item.size} × {item.quantity}
+                      {item.size}
+                      {item.fit ? ` · ${item.fit}` : ""} × {item.quantity}
                     </p>
                   </div>
                   <p className="text-sm font-medium">

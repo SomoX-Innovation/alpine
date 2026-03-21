@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, memo } from "react";
 import ProductCard from "@/components/ProductCard";
-import type { Product, ProductCategory, ProductFit } from "@/lib/types";
+import { productFitList, type Product, type ProductCategory, type ProductFit } from "@/lib/types";
 
 type SortOption = "featured" | "price-asc" | "price-desc" | "newest";
 
@@ -76,6 +76,7 @@ const FilterPanel = memo(function FilterPanel({
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--muted)]">
                   <input
                     type="checkbox"
+                    suppressHydrationWarning
                     checked={selectedCategories.size === 0 ? true : selectedCategories.has(c)}
                     onChange={() => toggleCategory(c)}
                     className="h-4 w-4 rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
@@ -97,6 +98,7 @@ const FilterPanel = memo(function FilterPanel({
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--muted)]">
                   <input
                     type="checkbox"
+                    suppressHydrationWarning
                     checked={selectedFits.has(fit)}
                     onChange={() => toggleFit(fit)}
                     className="h-4 w-4 rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
@@ -128,6 +130,7 @@ const FilterPanel = memo(function FilterPanel({
             />
             <input
               type="range"
+              suppressHydrationWarning
               min={priceMinMax.min}
               max={priceMinMax.max}
               step={1}
@@ -142,6 +145,7 @@ const FilterPanel = memo(function FilterPanel({
             />
             <input
               type="range"
+              suppressHydrationWarning
               min={priceMinMax.min}
               max={priceMinMax.max}
               step={1}
@@ -171,6 +175,7 @@ const FilterPanel = memo(function FilterPanel({
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--muted)]">
                   <input
                     type="checkbox"
+                    suppressHydrationWarning
                     checked={selectedColors.has(color)}
                     onChange={() => toggleColor(color)}
                     className="h-4 w-4 rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
@@ -191,6 +196,7 @@ const FilterPanel = memo(function FilterPanel({
               <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--muted)]">
                 <input
                   type="checkbox"
+                  suppressHydrationWarning
                   checked={selectedBadges.has(badge)}
                   onChange={() => toggleBadge(badge)}
                   className="h-4 w-4 rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
@@ -205,6 +211,7 @@ const FilterPanel = memo(function FilterPanel({
       {activeFilterCount > 0 && (
         <button
           type="button"
+          suppressHydrationWarning
           onClick={clearAllFilters}
           className="text-sm font-medium text-[var(--accent)] hover:underline"
         >
@@ -267,7 +274,7 @@ export default function CollectionLayout({
   const availableFits = useMemo(() => {
     const set = new Set<ProductFit>();
     products.forEach((p) => {
-      if (p.fit) set.add(p.fit);
+      productFitList(p).forEach((f) => set.add(f));
     });
     return Array.from(set).sort();
   }, [products]);
@@ -294,7 +301,9 @@ export default function CollectionLayout({
     }
 
     if (selectedFits.size > 0) {
-      result = result.filter((p) => p.fit && selectedFits.has(p.fit));
+      result = result.filter((p) =>
+        productFitList(p).some((f) => selectedFits.has(f))
+      );
     }
 
     if (priceRange) {
@@ -398,6 +407,7 @@ export default function CollectionLayout({
         <div className="flex items-center gap-3">
           <button
             type="button"
+            suppressHydrationWarning
             onClick={() => setMobileFiltersOpen(true)}
             className="flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm font-medium text-[var(--foreground)] lg:hidden"
           >
@@ -421,6 +431,7 @@ export default function CollectionLayout({
           </label>
           <select
             id="sort"
+            suppressHydrationWarning
             value={sort}
             onChange={(e) => setSort(e.target.value as SortOption)}
             className="rounded-md border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
@@ -478,6 +489,7 @@ export default function CollectionLayout({
               <p className="text-[var(--muted)]">No products match your filters.</p>
               <button
                 type="button"
+                suppressHydrationWarning
                 onClick={clearAllFilters}
                 className="mt-3 text-sm font-medium text-[var(--accent)] hover:underline"
               >
@@ -503,6 +515,7 @@ export default function CollectionLayout({
               </h2>
               <button
                 type="button"
+                suppressHydrationWarning
                 onClick={() => setMobileFiltersOpen(false)}
                 className="rounded-md p-2 text-[var(--muted)] hover:bg-[var(--muted-bg)]"
                 aria-label="Close filters"

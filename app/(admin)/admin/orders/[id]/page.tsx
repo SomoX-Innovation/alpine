@@ -69,7 +69,8 @@ export default async function AdminOrderDetailPage({
                   className="flex justify-between text-sm text-[var(--foreground)]"
                 >
                   <span>
-                    {item.name} — {item.size} × {item.quantity}
+                    {item.name} — {item.size}
+                    {item.fit ? ` — ${item.fit}` : ""} × {item.quantity}
                   </span>
                   <span>Rs. {(item.price * item.quantity).toFixed(2)}</span>
                 </li>

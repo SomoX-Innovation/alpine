@@ -8,14 +8,25 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { CartItem } from "@/lib/types";
+import type { CartItem, ProductFit } from "@/lib/types";
+
+function sameCartLine(
+  a: Pick<CartItem, "productId" | "size" | "fit">,
+  b: Pick<CartItem, "productId" | "size" | "fit">
+) {
+  return (
+    a.productId === b.productId &&
+    a.size === b.size &&
+    (a.fit ?? "") === (b.fit ?? "")
+  );
+}
 
 type CartContextValue = {
   items: CartItem[];
   count: number;
   addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
-  removeItem: (productId: string, size: string) => void;
-  updateQuantity: (productId: string, size: string, quantity: number) => void;
+  removeItem: (productId: string, size: string, fit?: ProductFit) => void;
+  updateQuantity: (productId: string, size: string, quantity: number, fit?: ProductFit) => void;
   clearCart: () => void;
 };
 
@@ -55,9 +66,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     (item: Omit<CartItem, "quantity"> & { quantity?: number }) => {
       const qty = item.quantity ?? 1;
       setItems((prev) => {
-        const i = prev.findIndex(
-          (x) => x.productId === item.productId && x.size === item.size
-        );
+        const i = prev.findIndex((x) => sameCartLine(x, item));
         if (i >= 0) {
           const next = [...prev];
           next[i] = { ...next[i], quantity: next[i].quantity + qty };
@@ -69,21 +78,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const removeItem = useCallback((productId: string, size: string) => {
+  const removeItem = useCallback((productId: string, size: string, fit?: ProductFit) => {
     setItems((prev) =>
-      prev.filter((x) => !(x.productId === productId && x.size === size))
+      prev.filter(
+        (x) => !sameCartLine(x, { productId, size, fit })
+      )
     );
   }, []);
 
   const updateQuantity = useCallback(
-    (productId: string, size: string, quantity: number) => {
+    (productId: string, size: string, quantity: number, fit?: ProductFit) => {
       if (quantity < 1) {
-        removeItem(productId, size);
+        removeItem(productId, size, fit);
         return;
       }
       setItems((prev) =>
         prev.map((x) =>
-          x.productId === productId && x.size === size
+          sameCartLine(x, { productId, size, fit })
             ? { ...x, quantity }
             : x
         )

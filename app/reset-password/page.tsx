@@ -3,28 +3,31 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { login } from "@/app/actions/auth";
+import { updatePassword } from "@/app/actions/auth";
 import { safeRedirectPath } from "@/lib/safe-redirect";
 
-function LoginForm() {
-  const [error, setError] = useState<string | null>(null);
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const reset = searchParams.get("reset");
-  const authError = searchParams.get("error");
-  const redirectAfter = safeRedirectPath(searchParams.get("redirect"));
+  /** After setting password, send user here (store login or admin login) */
+  const afterLogin = safeRedirectPath(searchParams.get("redirect"), "/login");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setPending(true);
     const form = e.currentTarget;
     const formData = new FormData(form);
-    const result = await login(formData);
+    const result = await updatePassword(formData);
+    setPending(false);
     if (result?.error) {
       setError(result.error);
       return;
     }
-    router.push(redirectAfter);
+    const sep = afterLogin.includes("?") ? "&" : "?";
+    router.push(`${afterLogin}${sep}reset=1`);
     router.refresh();
   }
 
@@ -32,23 +35,11 @@ function LoginForm() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--background)] px-4">
       <div className="w-full max-w-sm rounded-lg border border-[var(--border)] bg-[var(--card)] p-8">
         <h1 className="font-display text-xl font-semibold text-[var(--foreground)]">
-          Sign in
+          Set new password
         </h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Access your account and order history.
+          Choose a new password for your account.
         </p>
-
-        {reset === "1" && (
-          <p className="mt-4 rounded-md bg-[var(--muted-bg)] px-3 py-2 text-sm text-[var(--foreground)]">
-            Your password has been updated. Please sign in.
-          </p>
-        )}
-
-        {authError && (
-          <p className="mt-4 rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-500">
-            {decodeURIComponent(authError.replace(/\+/g, " "))}
-          </p>
-        )}
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {error && (
@@ -59,69 +50,69 @@ function LoginForm() {
 
           <div>
             <label
-              htmlFor="email"
-              className="block text-sm font-medium text-[var(--foreground)]"
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
-            <label
               htmlFor="password"
               className="block text-sm font-medium text-[var(--foreground)]"
             >
-              Password
+              New password
             </label>
             <input
               id="password"
               name="password"
               type="password"
               required
-              autoComplete="current-password"
+              minLength={6}
+              autoComplete="new-password"
+              className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="confirm_password"
+              className="block text-sm font-medium text-[var(--foreground)]"
+            >
+              Confirm password
+            </label>
+            <input
+              id="confirm_password"
+              name="confirm_password"
+              type="password"
+              required
+              minLength={6}
+              autoComplete="new-password"
               className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full rounded-md bg-[var(--foreground)] py-2.5 text-sm font-semibold text-[var(--background)] transition-colors hover:bg-[var(--accent)]"
+            disabled={pending}
+            className="w-full rounded-md bg-[var(--foreground)] py-2.5 text-sm font-semibold text-[var(--background)] transition-colors hover:bg-[var(--accent)] disabled:opacity-60"
           >
-            Sign in
+            {pending ? "Saving…" : "Update password"}
           </button>
         </form>
 
-        <div className="mt-4 text-center text-sm">
-          <Link href="/forgot-password" className="text-[var(--accent)] hover:underline">
-            Forgot password?
+        <p className="mt-4 text-center text-sm text-[var(--muted)]">
+          <Link href="/login" className="text-[var(--accent)] hover:underline">
+            Back to sign in
           </Link>
-        </div>
-
-        <div className="mt-3 text-center text-sm">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-[var(--accent)] hover:underline">
-            Register
-          </Link>
-        </div>
+        </p>
       </div>
     </div>
   );
 }
 
-export default function LoginPage() {
+export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={null}>
-      <LoginForm />
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center text-[var(--muted)]">
+          Loading…
+        </div>
+      }
+    >
+      <ResetPasswordForm />
     </Suspense>
   );
 }
-

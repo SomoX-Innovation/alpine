@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import { CURRENCY, SHIPPING_COUNTRY } from "@/lib/currency";
 
 export const metadata = {
   title: "Shipping & Returns — Alpine",
@@ -22,10 +23,16 @@ export default function ShippingPage() {
               Shipping
             </h2>
             <ul className="mt-4 space-y-2 text-[var(--foreground)]/90">
-              <li>• Free standard shipping on orders over Rs. 5,000.</li>
-              <li>• Standard delivery: 3–5 business days (EU).</li>
-              <li>• Express options available at checkout.</li>
-              <li>• We ship to EU addresses only at this time.</li>
+              <li>
+                • Standard shipping: Rs. {CURRENCY.shippingCost} on orders under Rs.{" "}
+                {CURRENCY.freeShippingThreshold.toLocaleString()}.
+              </li>
+              <li>
+                • Free standard shipping on orders over Rs.{" "}
+                {CURRENCY.freeShippingThreshold.toLocaleString()}.
+              </li>
+              <li>• We ship to addresses in {SHIPPING_COUNTRY} only.</li>
+              <li>• Standard delivery: typically 3–5 business days within {SHIPPING_COUNTRY}.</li>
             </ul>
           </section>
 

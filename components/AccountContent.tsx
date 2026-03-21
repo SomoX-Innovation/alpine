@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { logout } from "@/app/actions/auth";
+import type { CustomerOrderSummary } from "@/app/actions/orders";
+import OrderStatusBadge from "@/components/OrderStatusBadge";
 
 type Tab = "overview" | "orders" | "profile" | "addresses";
 
@@ -16,9 +18,11 @@ const tabs: { id: Tab; label: string }[] = [
 export default function AccountContent({
   userEmail,
   userConfirmed,
+  orders = [],
 }: {
   userEmail?: string | null;
   userConfirmed?: boolean;
+  orders?: CustomerOrderSummary[];
 }) {
   const [active, setActive] = useState<Tab>("overview");
   const needsEmailConfirmation = Boolean(userEmail) && userConfirmed === false;
@@ -137,9 +141,38 @@ export default function AccountContent({
               <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">
                 Order history
               </h2>
-              <p className="mt-2 text-sm text-[var(--muted)]">
-                You haven&apos;t placed any orders yet. When you do, they&apos;ll appear here.
-              </p>
+              {!userEmail ? (
+                <p className="mt-2 text-sm text-[var(--muted)]">
+                  Sign in to see your orders.
+                </p>
+              ) : orders.length === 0 ? (
+                <p className="mt-2 text-sm text-[var(--muted)]">
+                  You haven&apos;t placed any orders yet. When you do, they&apos;ll appear here.
+                </p>
+              ) : (
+                <ul className="mt-4 divide-y divide-[var(--border)] rounded-lg border border-[var(--border)]">
+                  {orders.map((o) => (
+                    <li key={o.id}>
+                      <Link
+                        href={`/account/orders/${o.id}`}
+                        className="flex flex-col gap-2 px-4 py-4 text-sm hover:bg-[var(--muted-bg)] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono font-semibold text-[var(--foreground)]">{o.order_number}</span>
+                          <OrderStatusBadge status={o.status} />
+                        </div>
+                        <span className="text-[var(--muted)]">
+                          {new Date(o.created_at).toLocaleDateString()}
+                        </span>
+                        <span className="font-medium text-[var(--foreground)] sm:ml-auto">
+                          Rs. {Number(o.total).toFixed(2)}
+                        </span>
+                        <span className="w-full text-xs text-[var(--accent)] sm:w-auto">View details →</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
 
@@ -154,8 +187,9 @@ export default function AccountContent({
                 </label>
                 <input
                   type="email"
-                  defaultValue="customer@example.com"
-                  className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                  readOnly
+                  defaultValue={userEmail ?? ""}
+                  className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-2.5 text-[var(--foreground)]"
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">

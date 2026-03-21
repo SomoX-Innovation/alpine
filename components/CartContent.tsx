@@ -43,7 +43,7 @@ export default function CartContent() {
         <ul className="space-y-6 lg:col-span-2">
           {items.map((item) => (
             <li
-              key={`${item.productId}-${item.size}`}
+              key={`${item.productId}-${item.size}-${item.fit ?? ""}`}
               className="flex gap-4 rounded-lg border border-[var(--border)] bg-[var(--card)] p-4"
             >
               <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-md bg-[var(--muted-bg)]">
@@ -64,14 +64,15 @@ export default function CartContent() {
                   {item.name}
                 </Link>
                 <p className="mt-0.5 text-sm text-[var(--muted)]">
-                  Size: {item.size} · Rs. {item.price}
+                  Size: {item.size}
+                  {item.fit ? ` · Fit: ${item.fit}` : ""} · Rs. {item.price}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex items-center rounded border border-[var(--border)]">
                     <button
                       type="button"
                       onClick={() =>
-                        updateQuantity(item.productId, item.size, item.quantity - 1)
+                        updateQuantity(item.productId, item.size, item.quantity - 1, item.fit)
                       }
                       className="flex h-8 w-8 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
                       aria-label="Decrease"
@@ -82,7 +83,7 @@ export default function CartContent() {
                     <button
                       type="button"
                       onClick={() =>
-                        updateQuantity(item.productId, item.size, item.quantity + 1)
+                        updateQuantity(item.productId, item.size, item.quantity + 1, item.fit)
                       }
                       className="flex h-8 w-8 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
                       aria-label="Increase"
@@ -92,7 +93,7 @@ export default function CartContent() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => removeItem(item.productId, item.size)}
+                    onClick={() => removeItem(item.productId, item.size, item.fit)}
                     className="text-sm text-[var(--muted)] underline hover:text-[var(--foreground)]"
                   >
                     Remove
@@ -136,11 +137,20 @@ export default function CartContent() {
               <dt>Total</dt>
               <dd>Rs. {total.toFixed(2)}</dd>
             </div>
+            <p className="mt-3 text-xs text-[var(--muted)]">
+              You must be signed in to place an order. You&apos;ll be asked to sign in at checkout if needed.
+            </p>
             <Link
               href="/checkout"
               className="mt-6 flex w-full items-center justify-center rounded-md bg-[var(--foreground)] px-4 py-3 text-sm font-semibold text-[var(--background)] hover:bg-[var(--accent)]"
             >
               Proceed to checkout
+            </Link>
+            <Link
+              href="/login?redirect=/checkout"
+              className="mt-2 block text-center text-sm text-[var(--accent)] hover:underline"
+            >
+              Sign in first
             </Link>
             <Link
               href="/women"

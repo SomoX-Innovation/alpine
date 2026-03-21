@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AccountContent from "@/components/AccountContent";
 import { createClient } from "@/lib/supabase-server";
+import { getMyOrders } from "@/app/actions/orders";
 
 export const metadata = {
   title: "Account — Alpine",
@@ -11,6 +12,7 @@ export const metadata = {
 export default async function AccountPage() {
   let userEmail: string | null = null;
   let userConfirmed = false;
+  let orders: Awaited<ReturnType<typeof getMyOrders>> = [];
   try {
     const supabase = await createClient();
     const {
@@ -18,6 +20,9 @@ export default async function AccountPage() {
     } = await supabase.auth.getUser();
     userEmail = user?.email ?? null;
     userConfirmed = Boolean((user as any)?.confirmed_at);
+    if (user) {
+      orders = await getMyOrders();
+    }
   } catch {
     // If auth isn't configured, keep the account page in logged-out mode.
   }
@@ -26,7 +31,7 @@ export default async function AccountPage() {
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <AccountContent userEmail={userEmail} userConfirmed={userConfirmed} />
+        <AccountContent userEmail={userEmail} userConfirmed={userConfirmed} orders={orders} />
       </main>
       <Footer />
     </div>

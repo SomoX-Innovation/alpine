@@ -14,7 +14,9 @@ export type Product = {
   image: string;
   images: string[];
   badge?: "New" | "Sale";
-  /** Filter-only category: Oversize or Regular */
+  /** Which fits this product is available in (storefront filter + PDP). Same color images apply to all selected fits. */
+  fits: ProductFit[];
+  /** @deprecated Use `fits`; kept for legacy rows / single-fit display */
   fit?: ProductFit;
   description: string;
   itemCode?: string;
@@ -27,6 +29,13 @@ export type Product = {
   quantity: number;
 };
 
+/** Fits for filtering / PDP (handles legacy `fit` when `fits` is empty). */
+export function productFitList(product: Product): ProductFit[] {
+  if (product.fits.length > 0) return product.fits;
+  if (product.fit) return [product.fit];
+  return [];
+}
+
 export type CartItem = {
   productId: string;
   name: string;
@@ -34,4 +43,6 @@ export type CartItem = {
   image: string;
   size: string;
   quantity: number;
+  /** When product offers multiple fits, line is keyed by size + fit */
+  fit?: ProductFit;
 };
