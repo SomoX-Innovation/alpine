@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { CURRENCY } from "@/lib/currency";
 
-export default function CartContent() {
+export default function CartContent({ isSignedIn = false }: { isSignedIn?: boolean }) {
   const { items, removeItem, updateQuantity } = useCart();
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const shipping = subtotal >= CURRENCY.freeShippingThreshold ? 0 : CURRENCY.shippingCost;
@@ -138,7 +138,9 @@ export default function CartContent() {
               <dd>Rs. {total.toFixed(2)}</dd>
             </div>
             <p className="mt-3 text-xs text-[var(--muted)]">
-              You must be signed in to place an order. You&apos;ll be asked to sign in at checkout if needed.
+              {isSignedIn
+                ? "You’re signed in — continue to checkout to place your order."
+                : "You must be signed in to place an order. You&apos;ll be asked to sign in at checkout if needed."}
             </p>
             <Link
               href="/checkout"
@@ -146,12 +148,14 @@ export default function CartContent() {
             >
               Proceed to checkout
             </Link>
-            <Link
-              href="/login?redirect=/checkout"
-              className="mt-2 block text-center text-sm text-[var(--accent)] hover:underline"
-            >
-              Sign in first
-            </Link>
+            {!isSignedIn && (
+              <Link
+                href="/login?redirect=/checkout"
+                className="mt-2 block text-center text-sm text-[var(--accent)] hover:underline"
+              >
+                Sign in first
+              </Link>
+            )}
             <Link
               href="/women"
               className="mt-3 block text-center text-sm text-[var(--accent)] hover:underline"

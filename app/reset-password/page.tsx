@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { updatePassword } from "@/app/actions/auth";
+import PasswordInput from "@/components/PasswordInput";
 import { safeRedirectPath } from "@/lib/safe-redirect";
 
 function ResetPasswordForm() {
@@ -55,14 +56,12 @@ function ResetPasswordForm() {
             >
               New password
             </label>
-            <input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               required
               minLength={6}
               autoComplete="new-password"
-              className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
           </div>
 
@@ -73,14 +72,12 @@ function ResetPasswordForm() {
             >
               Confirm password
             </label>
-            <input
+            <PasswordInput
               id="confirm_password"
               name="confirm_password"
-              type="password"
               required
               minLength={6}
               autoComplete="new-password"
-              className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
           </div>
 

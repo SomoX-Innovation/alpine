@@ -10,31 +10,93 @@ import { createServiceRoleClient } from "@/lib/supabase-service";
 const PRODUCT_ID_UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function incrementProductOrderedQuantities(lineItems: OrderLineItem[]) {
+/** Total units per product id (same product can appear on multiple lines). */
+function aggregateNeedByProduct(lineItems: OrderLineItem[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const line of lineItems) {
+    const pid = line.productId?.trim();
+    if (!pid || !PRODUCT_ID_UUID.test(pid)) continue;
+    const q = Math.max(0, Math.floor(Number(line.quantity)) || 0);
+    if (q <= 0) continue;
+    map.set(pid, (map.get(pid) ?? 0) + q);
+  }
+  return map;
+}
+
+async function validateStockBeforeOrder(
+  lineItems: OrderLineItem[]
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const need = aggregateNeedByProduct(lineItems);
+  if (need.size === 0) {
+    return { ok: false, error: "Your cart has no valid products." };
+  }
+  const supabase = createServerClient();
+  if (!supabase) {
+    return { ok: false, error: "Store is unavailable." };
+  }
+  const ids = [...need.keys()];
+  const { data: rows, error } = await supabase
+    .from("products")
+    .select("id, name, quantity, published")
+    .in("id", ids);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  const byId = new Map(
+    (rows ?? []).map((r: { id: string; name: string; quantity: number; published: boolean }) => [
+      r.id,
+      { name: r.name, quantity: r.quantity, published: r.published },
+    ])
+  );
+  for (const [pid, requested] of need) {
+    const row = byId.get(pid);
+    if (!row || !row.published) {
+      return { ok: false, error: "A product in your cart is no longer available." };
+    }
+    const available = typeof row.quantity === "number" ? row.quantity : 0;
+    if (available < requested) {
+      return {
+        ok: false,
+        error: `Not enough stock for "${row.name}". Only ${available} available (you requested ${requested}).`,
+      };
+    }
+  }
+  return { ok: true };
+}
+
+/**
+ * Decrements `quantity` and increments `ordered_quantity` in one DB transaction (requires service role).
+ * Returns false if RPC failed (caller should delete the order row).
+ */
+async function applyOrderInventoryChanges(lineItems: OrderLineItem[]): Promise<boolean> {
   const svc = createServiceRoleClient();
   if (!svc) {
     console.warn(
-      "[orders] SUPABASE_SERVICE_ROLE_KEY missing — ordered_quantity not updated. Add it for production."
+      "[orders] SUPABASE_SERVICE_ROLE_KEY missing — stock and ordered counts not updated. Add it for production."
     );
-    return;
+    return true;
   }
-  for (const line of lineItems) {
-    const qty = Math.max(0, Math.floor(Number(line.quantity)) || 0);
-    if (qty <= 0) continue;
-    const pid = line.productId?.trim();
-    if (!pid || !PRODUCT_ID_UUID.test(pid)) continue;
+  const need = aggregateNeedByProduct(lineItems);
+  const payload = [...need.entries()].map(([product_id, qty]) => ({ product_id, qty }));
+  if (payload.length === 0) {
+    return false;
+  }
+  const { error } = await svc.rpc("apply_order_inventory_changes", {
+    p_lines: payload,
+  });
+  if (error) {
+    console.error("[orders] apply_order_inventory_changes", error.message);
+    return false;
+  }
+  return true;
+}
 
-    const { error } = await svc.rpc("increment_product_ordered_quantity", {
-      p_product_id: pid,
-      p_qty: qty,
-    });
-    if (error) {
-      console.error(
-        "[orders] increment_product_ordered_quantity",
-        pid,
-        error.message
-      );
-    }
+async function deleteOrderById(orderId: string): Promise<void> {
+  const svc = createServiceRoleClient();
+  if (!svc) return;
+  const { error } = await svc.from("orders").delete().eq("id", orderId);
+  if (error) {
+    console.error("[orders] failed to roll back order after inventory error", orderId, error.message);
   }
 }
 
@@ -91,6 +153,11 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     return { error: `We only ship to ${SHIPPING_COUNTRY}.` };
   }
 
+  const stockCheck = await validateStockBeforeOrder(input.line_items);
+  if (!stockCheck.ok) {
+    return { error: stockCheck.error };
+  }
+
   const { count } = await supabase.from("orders").select("id", { count: "exact", head: true });
   const order_number = `ALP-${1001 + (count ?? 0)}`;
 
@@ -119,7 +186,15 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     return { error: error.message };
   }
 
-  await incrementProductOrderedQuantities(input.line_items);
+  const inventoryOk = await applyOrderInventoryChanges(input.line_items);
+  if (!inventoryOk) {
+    await deleteOrderById(inserted.id);
+    return {
+      error:
+        "Stock changed while placing your order. Please refresh the page, review your cart, and try again.",
+    };
+  }
+
   for (const line of input.line_items) {
     const pid = line.productId?.trim();
     if (pid && PRODUCT_ID_UUID.test(pid)) {

@@ -6,12 +6,14 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { login } from "../actions/auth";
 import BrandLogo from "@/components/BrandLogo";
+import PasswordInput from "@/components/PasswordInput";
 
 function AdminLoginForm() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const reset = searchParams.get("reset");
+  const forbidden = searchParams.get("error") === "forbidden";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -36,6 +38,13 @@ function AdminLoginForm() {
         <p className="mt-1 text-sm text-[var(--muted)]">
           Sign in to manage products and orders.
         </p>
+        {forbidden && (
+          <p className="mt-4 rounded-md bg-amber-500/10 px-3 py-2 text-sm text-[var(--foreground)]">
+            This area is for store staff only. Your account must be listed in the{" "}
+            <code className="rounded bg-[var(--muted-bg)] px-1 text-xs">admin_users</code> table (see{" "}
+            <code className="text-xs">docs/ADMIN_ACCESS.md</code>).
+          </p>
+        )}
         {reset === "1" && (
           <p className="mt-4 rounded-md bg-[var(--muted-bg)] px-3 py-2 text-sm text-[var(--foreground)]">
             Your password has been updated. You can sign in now.
@@ -71,13 +80,11 @@ function AdminLoginForm() {
             >
               Password
             </label>
-            <input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               required
               autoComplete="current-password"
-              className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
           </div>
           <button

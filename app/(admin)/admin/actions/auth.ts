@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase-server"
 import { getSiteUrl } from "@/lib/site-url"
+import { isUserInAdminTable } from "@/lib/admin-auth"
 
 export async function login(formData: FormData) {
   const email = formData.get("email") as string
@@ -17,6 +18,18 @@ export async function login(formData: FormData) {
 
   if (error) {
     return { error: error.message }
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const isAdmin = user ? await isUserInAdminTable(supabase, user.id) : false
+  if (!isAdmin) {
+    await supabase.auth.signOut()
+    return {
+      error:
+        "This account does not have admin access. Use the store sign-in for customer accounts.",
+    }
   }
 
   revalidatePath("/", "layout")

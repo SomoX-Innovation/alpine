@@ -7,24 +7,26 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { createOrder } from "@/app/actions/orders";
 import { CURRENCY, SHIPPING_COUNTRY } from "@/lib/currency";
+import type { CustomerProfile } from "@/app/actions/account";
 
 type CheckoutContentProps = {
   userEmail: string;
+  savedProfile: CustomerProfile | null;
 };
 
-export default function CheckoutContent({ userEmail }: CheckoutContentProps) {
+export default function CheckoutContent({ userEmail, savedProfile }: CheckoutContentProps) {
   const router = useRouter();
   const { items, clearCart } = useCart();
   const [step, setStep] = useState<"shipping" | "payment" | "confirmation">("shipping");
   const [error, setError] = useState<string | null>(null);
-  const [shippingData, setShippingData] = useState({
-    firstName: "",
-    lastName: "",
-    address: "",
-    city: "",
-    postalCode: "",
-    country: SHIPPING_COUNTRY,
-  });
+  const [shippingData, setShippingData] = useState(() => ({
+    firstName: savedProfile?.first_name?.trim() || "",
+    lastName: savedProfile?.last_name?.trim() || "",
+    address: savedProfile?.address_line?.trim() || "",
+    city: savedProfile?.city?.trim() || "",
+    postalCode: savedProfile?.postal_code?.trim() || "",
+    country: savedProfile?.country?.trim() || SHIPPING_COUNTRY,
+  }));
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const shipping = subtotal >= CURRENCY.freeShippingThreshold ? 0 : CURRENCY.shippingCost;
   const total = subtotal + shipping;
@@ -118,6 +120,7 @@ export default function CheckoutContent({ userEmail }: CheckoutContentProps) {
                     name="firstName"
                     type="text"
                     required
+                    defaultValue={shippingData.firstName}
                     className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                   />
                 </div>
@@ -129,6 +132,7 @@ export default function CheckoutContent({ userEmail }: CheckoutContentProps) {
                     name="lastName"
                     type="text"
                     required
+                    defaultValue={shippingData.lastName}
                     className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                   />
                 </div>
@@ -141,6 +145,7 @@ export default function CheckoutContent({ userEmail }: CheckoutContentProps) {
                   name="address"
                   type="text"
                   required
+                  defaultValue={shippingData.address}
                   className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                   placeholder="Street address"
                 />
@@ -154,6 +159,7 @@ export default function CheckoutContent({ userEmail }: CheckoutContentProps) {
                     name="city"
                     type="text"
                     required
+                    defaultValue={shippingData.city}
                     className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                   />
                 </div>
@@ -165,6 +171,7 @@ export default function CheckoutContent({ userEmail }: CheckoutContentProps) {
                     name="postalCode"
                     type="text"
                     required
+                    defaultValue={shippingData.postalCode}
                     className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                   />
                 </div>

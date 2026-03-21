@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
+import { isUserInAdminTable } from "@/lib/admin-auth"
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -49,6 +50,15 @@ export async function middleware(request: NextRequest) {
   if (!user) {
     const url = request.nextUrl.clone()
     url.pathname = "/admin/login"
+    return NextResponse.redirect(url)
+  }
+
+  // Logged-in customers must not access the dashboard — only rows in public.admin_users
+  const isAdmin = await isUserInAdminTable(supabase, user.id)
+  if (!isAdmin) {
+    const url = request.nextUrl.clone()
+    url.pathname = "/admin/login"
+    url.searchParams.set("error", "forbidden")
     return NextResponse.redirect(url)
   }
 

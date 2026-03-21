@@ -1,10 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { logout } from "@/app/actions/auth";
 import type { CustomerOrderSummary } from "@/app/actions/orders";
+import {
+  saveProfile,
+  saveShippingAddress,
+  type CustomerProfile,
+} from "@/app/actions/account";
+import { SHIPPING_COUNTRY } from "@/lib/currency";
 import OrderStatusBadge from "@/components/OrderStatusBadge";
 
 function thumbUnoptimized(src: string) {
@@ -20,17 +26,198 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "addresses", label: "Addresses" },
 ];
 
+const EMPTY_PROFILE: CustomerProfile = {
+  first_name: "",
+  last_name: "",
+  phone: "",
+  address_line: "",
+  city: "",
+  postal_code: "",
+  country: SHIPPING_COUNTRY,
+};
+
+function ProfileForm({
+  profile,
+  userEmail,
+}: {
+  profile: CustomerProfile;
+  userEmail: string;
+}) {
+  const [state, formAction, pending] = useActionState(saveProfile, null);
+  return (
+    <form action={formAction} className="max-w-md space-y-4">
+      <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">
+        Profile details
+      </h2>
+      <div>
+        <label className="block text-sm font-medium text-[var(--foreground)]">Email</label>
+        <input
+          type="email"
+          readOnly
+          value={userEmail}
+          className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-2.5 text-[var(--foreground)]"
+        />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="first_name" className="block text-sm font-medium text-[var(--foreground)]">
+            First name
+          </label>
+          <input
+            id="first_name"
+            name="first_name"
+            type="text"
+            required
+            defaultValue={profile.first_name}
+            autoComplete="given-name"
+            className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          />
+        </div>
+        <div>
+          <label htmlFor="last_name" className="block text-sm font-medium text-[var(--foreground)]">
+            Last name
+          </label>
+          <input
+            id="last_name"
+            name="last_name"
+            type="text"
+            required
+            defaultValue={profile.last_name}
+            autoComplete="family-name"
+            className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          />
+        </div>
+      </div>
+      <div>
+        <label htmlFor="phone" className="block text-sm font-medium text-[var(--foreground)]">
+          WhatsApp number
+        </label>
+        <input
+          id="phone"
+          name="phone"
+          type="tel"
+          defaultValue={profile.phone}
+          autoComplete="tel"
+          placeholder="e.g. +94 77 123 4567"
+          aria-label="WhatsApp number"
+          className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+        />
+      </div>
+      {state?.error && (
+        <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-600">{state.error}</p>
+      )}
+      {state?.ok && (
+        <p className="rounded-md bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700">Profile saved.</p>
+      )}
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded-md bg-[var(--foreground)] px-4 py-2.5 text-sm font-semibold text-[var(--background)] hover:bg-[var(--accent)] disabled:opacity-60"
+      >
+        {pending ? "Saving…" : "Save changes"}
+      </button>
+    </form>
+  );
+}
+
+function AddressForm({ profile }: { profile: CustomerProfile }) {
+  const [state, formAction, pending] = useActionState(saveShippingAddress, null);
+  return (
+    <form action={formAction} className="max-w-md space-y-4">
+      <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">
+        Default shipping address
+      </h2>
+      <p className="text-sm text-[var(--muted)]">
+        Used to prefill checkout. We currently ship within {SHIPPING_COUNTRY} only.
+      </p>
+      <div>
+        <label htmlFor="address_line" className="block text-sm font-medium text-[var(--foreground)]">
+          Street address
+        </label>
+        <input
+          id="address_line"
+          name="address_line"
+          type="text"
+          required
+          defaultValue={profile.address_line}
+          autoComplete="street-address"
+          className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+        />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="city" className="block text-sm font-medium text-[var(--foreground)]">
+            City
+          </label>
+          <input
+            id="city"
+            name="city"
+            type="text"
+            required
+            defaultValue={profile.city}
+            autoComplete="address-level2"
+            className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          />
+        </div>
+        <div>
+          <label htmlFor="postal_code" className="block text-sm font-medium text-[var(--foreground)]">
+            Postal code
+          </label>
+          <input
+            id="postal_code"
+            name="postal_code"
+            type="text"
+            required
+            defaultValue={profile.postal_code}
+            autoComplete="postal-code"
+            className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          />
+        </div>
+      </div>
+      <div>
+        <label htmlFor="country" className="block text-sm font-medium text-[var(--foreground)]">
+          Country
+        </label>
+        <input
+          id="country"
+          name="country"
+          type="text"
+          readOnly
+          defaultValue={profile.country || SHIPPING_COUNTRY}
+          className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-2.5 text-[var(--foreground)]"
+        />
+      </div>
+      {state?.error && (
+        <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-600">{state.error}</p>
+      )}
+      {state?.ok && (
+        <p className="rounded-md bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700">Address saved.</p>
+      )}
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded-md bg-[var(--foreground)] px-4 py-2.5 text-sm font-semibold text-[var(--background)] hover:bg-[var(--accent)] disabled:opacity-60"
+      >
+        {pending ? "Saving…" : "Save address"}
+      </button>
+    </form>
+  );
+}
+
 export default function AccountContent({
   userEmail,
   userConfirmed,
   orders = [],
+  profile = null,
 }: {
   userEmail?: string | null;
   userConfirmed?: boolean;
   orders?: CustomerOrderSummary[];
+  profile?: CustomerProfile | null;
 }) {
   const [active, setActive] = useState<Tab>("overview");
   const needsEmailConfirmation = Boolean(userEmail) && userConfirmed === false;
+  const p = profile ?? EMPTY_PROFILE;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -217,63 +404,19 @@ export default function AccountContent({
             </div>
           )}
 
-          {active === "profile" && (
-            <form className="space-y-4 max-w-md">
-              <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">
-                Profile details
-              </h2>
-              <div>
-                <label className="block text-sm font-medium text-[var(--foreground)]">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  readOnly
-                  defaultValue={userEmail ?? ""}
-                  className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-2.5 text-[var(--foreground)]"
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--foreground)]">
-                    First name
-                  </label>
-                  <input
-                    type="text"
-                    defaultValue=""
-                    className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[var(--foreground)]">
-                    Last name
-                  </label>
-                  <input
-                    type="text"
-                    defaultValue=""
-                    className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                  />
-                </div>
-              </div>
-              <button
-                type="submit"
-                className="rounded-md bg-[var(--foreground)] px-4 py-2.5 text-sm font-semibold text-[var(--background)] hover:bg-[var(--accent)]"
-              >
-                Save changes
-              </button>
-            </form>
-          )}
+          {active === "profile" &&
+            (userEmail ? (
+              <ProfileForm profile={p} userEmail={userEmail} />
+            ) : (
+              <p className="text-sm text-[var(--muted)]">Sign in to save your profile.</p>
+            ))}
 
-          {active === "addresses" && (
-            <div>
-              <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">
-                Saved addresses
-              </h2>
-              <p className="mt-2 text-sm text-[var(--muted)]">
-                No saved addresses. Add one at checkout.
-              </p>
-            </div>
-          )}
+          {active === "addresses" &&
+            (userEmail ? (
+              <AddressForm profile={p} />
+            ) : (
+              <p className="text-sm text-[var(--muted)]">Sign in to save a default shipping address.</p>
+            ))}
         </div>
       </div>
     </div>
