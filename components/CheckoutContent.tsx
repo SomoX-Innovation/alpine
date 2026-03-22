@@ -229,7 +229,7 @@ export default function CheckoutContent({ userEmail, savedProfile }: CheckoutCon
                 }
                 clearCart();
                 if (result.order_id) {
-                  router.push(`/account/orders/${result.order_id}?placed=1`);
+                  router.push("/account?tab=orders&placed=1");
                   router.refresh();
                 }
               }}

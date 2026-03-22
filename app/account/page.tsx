@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AccountContent from "@/components/AccountContent";
@@ -34,12 +35,20 @@ export default async function AccountPage() {
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <AccountContent
-          userEmail={userEmail}
-          userConfirmed={userConfirmed}
-          orders={orders}
-          profile={profile}
-        />
+        <Suspense
+          fallback={
+            <div className="mx-auto max-w-7xl px-4 py-16 text-center text-sm text-[var(--muted)]">
+              Loading account…
+            </div>
+          }
+        >
+          <AccountContent
+            userEmail={userEmail}
+            userConfirmed={userConfirmed}
+            orders={orders}
+            profile={profile}
+          />
+        </Suspense>
       </main>
       <Footer />
     </div>

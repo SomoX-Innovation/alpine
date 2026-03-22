@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { logout } from "@/app/actions/auth";
 import type { CustomerOrderSummary } from "@/app/actions/orders";
 import {
@@ -216,15 +217,47 @@ export default function AccountContent({
   orders?: CustomerOrderSummary[];
   profile?: CustomerProfile | null;
 }) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [active, setActive] = useState<Tab>("overview");
+  const [placedSuccess, setPlacedSuccess] = useState(false);
   const needsEmailConfirmation = Boolean(userEmail) && userConfirmed === false;
   const p = profile ?? EMPTY_PROFILE;
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "orders" || tab === "overview" || tab === "profile" || tab === "addresses") {
+      setActive(tab as Tab);
+    }
+    if (searchParams.get("placed") === "1") {
+      setPlacedSuccess(true);
+      setActive("orders");
+      router.replace("/account?tab=orders", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <h1 className="font-display text-2xl font-semibold text-[var(--foreground)]">
         My account
       </h1>
+
+      {placedSuccess && (
+        <div className="mt-4 flex items-start justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-200">
+          <p>
+            <span className="font-semibold">Order placed.</span> Thank you — your order appears in the list
+            below. We&apos;ll email you updates.
+          </p>
+          <button
+            type="button"
+            onClick={() => setPlacedSuccess(false)}
+            className="shrink-0 rounded-md px-2 py-1 text-[var(--muted)] hover:bg-emerald-500/20 hover:text-[var(--foreground)]"
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <div className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
         {userEmail ? (

@@ -6,6 +6,7 @@ import { useCart } from "@/context/CartContext";
 import BrandLogo from "./BrandLogo";
 
 const navLinks = [
+  { href: "/", label: "Home" },
   { href: "/women", label: "Women" },
   { href: "/men", label: "Men" },
   { href: "/dtf", label: "DTF" },
@@ -92,7 +93,7 @@ export default function Header() {
           </Link>
           <Link
             href="/account"
-            className="hidden rounded-md p-2 text-[var(--foreground)] hover:bg-[var(--muted-bg)] sm:block"
+            className="rounded-md p-2 text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
             aria-label="Account"
           >
             <svg
