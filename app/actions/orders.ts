@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createServerClient } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase-server";
 import { sendOrderConfirmationEmail } from "@/lib/mail";
-import { SHIPPING_COUNTRY } from "@/lib/currency";
+import { CURRENCY, SHIPPING_COUNTRY } from "@/lib/currency";
 import { createServiceRoleClient } from "@/lib/supabase-service";
 
 const PRODUCT_ID_UUID =
@@ -38,21 +38,36 @@ async function validateProductsBeforeOrder(
   const ids = [...need.keys()];
   const { data: rows, error } = await supabase
     .from("products")
-    .select("id, name, published")
+    .select("id, name, published, fit, fits")
     .in("id", ids);
   if (error) {
     return { ok: false, error: error.message };
   }
-  const byId = new Map(
-    (rows ?? []).map((r: { id: string; name: string; published: boolean }) => [
-      r.id,
-      { name: r.name, published: r.published },
-    ])
-  );
+  const byId = new Map((rows ?? []).map((r) => [String(r.id), r]));
   for (const pid of need.keys()) {
     const row = byId.get(pid);
-    if (!row || !row.published) {
+    if (!row || !(row as { published?: boolean }).published) {
       return { ok: false, error: "A product in your cart is no longer available." };
+    }
+  }
+
+  for (const line of lineItems) {
+    const pid = line.productId?.trim();
+    if (!pid || !PRODUCT_ID_UUID.test(pid)) continue;
+    const row = byId.get(pid) as
+      | { id: string; name: string; published: boolean; fit?: unknown; fits?: unknown }
+      | undefined;
+    if (!row) continue;
+    const fits = Array.isArray(row.fits)
+      ? row.fits.filter((x): x is string => x === "Regular" || x === "Oversize")
+      : row.fit === "Regular" || row.fit === "Oversize"
+        ? [row.fit]
+        : [];
+    if (fits.length > 1 && (!line.fit || !fits.includes(line.fit))) {
+      return {
+        ok: false,
+        error: `Please choose a fit (Regular or Oversize) for ${row.name}.`,
+      };
     }
   }
   return { ok: true };
@@ -102,6 +117,8 @@ export type OrderLineItem = {
   price: number;
   /** Regular / Oversize when applicable */
   fit?: string;
+  /** Selected color name when applicable */
+  color?: string;
   /** Product image URL at checkout (shown on order details & account) */
   image?: string;
 };
@@ -221,16 +238,48 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 
 export async function updateOrder(
   id: string,
-  updates: { status?: string; tracking_code?: string; tracking_carrier?: string }
+  updates: {
+    status?: string;
+    tracking_code?: string;
+    tracking_carrier?: string;
+    customer_name?: string;
+    customer_email?: string;
+    shipping_address?: { address: string; city: string; postalCode: string; country: string };
+  }
 ): Promise<{ error?: string }> {
   const supabase = createServerClient();
   if (!supabase) return { error: "Database not configured." };
+  const patch: {
+    status?: string;
+    tracking_code?: string | null;
+    tracking_carrier?: string | null;
+    customer_name?: string;
+    customer_email?: string;
+    shipping_address?: { address: string; city: string; postalCode: string; country: string };
+    updated_at: string;
+  } = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (typeof updates.status === "string") patch.status = updates.status;
+  if (updates.tracking_code !== undefined) patch.tracking_code = updates.tracking_code || null;
+  if (updates.tracking_carrier !== undefined) patch.tracking_carrier = updates.tracking_carrier || null;
+  if (typeof updates.customer_name === "string") patch.customer_name = updates.customer_name.trim();
+  if (typeof updates.customer_email === "string") {
+    patch.customer_email = updates.customer_email.trim().toLowerCase();
+  }
+  if (updates.shipping_address) {
+    patch.shipping_address = {
+      address: String(updates.shipping_address.address || "").trim(),
+      city: String(updates.shipping_address.city || "").trim(),
+      postalCode: String(updates.shipping_address.postalCode || "").trim(),
+      country: String(updates.shipping_address.country || "").trim(),
+    };
+  }
+
   const { error } = await supabase
     .from("orders")
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString(),
-    })
+    .update(patch)
     .eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/admin");
@@ -340,4 +389,119 @@ export async function getCustomerOrderById(id: string): Promise<OrderDetail | nu
 
   if (error || !data) return null;
   return data as OrderDetail;
+}
+
+export async function updateOrderLineItemsAdmin(
+  orderId: string,
+  lineItems: OrderLineItem[]
+): Promise<{ ok?: true; error?: string }> {
+  const supabase = createServerClient();
+  if (!supabase) return { error: "Database not configured." };
+
+  const sanitized = lineItems
+    .map((i) => ({
+      productId: String(i.productId || "").trim(),
+      name: String(i.name || "").trim(),
+      size: String(i.size || "").trim(),
+      quantity: Math.max(0, Math.floor(Number(i.quantity) || 0)),
+      price: Number(i.price) || 0,
+      fit: i.fit ? String(i.fit).trim() : undefined,
+      color: i.color ? String(i.color).trim() : undefined,
+      image: i.image ? String(i.image).trim() : undefined,
+    }))
+    .filter((i) => i.productId && i.name && i.size && i.quantity > 0 && i.price >= 0);
+
+  if (sanitized.length === 0) {
+    return { error: "Order must contain at least one item." };
+  }
+
+  const productCheck = await validateProductsBeforeOrder(sanitized);
+  if (!productCheck.ok) return { error: productCheck.error };
+
+  const subtotal = sanitized.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const shippingCost =
+    subtotal >= CURRENCY.freeShippingThreshold ? 0 : CURRENCY.shippingCost;
+  const total = subtotal + shippingCost;
+
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      line_items: sanitized,
+      subtotal,
+      shipping_cost: shippingCost,
+      total,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", orderId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath("/account");
+  revalidatePath(`/account/orders/${orderId}`);
+  return { ok: true };
+}
+
+export async function updateMyOrderItems(
+  orderId: string,
+  lineItems: OrderLineItem[]
+): Promise<{ ok?: true; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return { error: "You must be signed in." };
+
+  const sanitized = lineItems
+    .map((i) => ({
+      productId: String(i.productId || "").trim(),
+      name: String(i.name || "").trim(),
+      size: String(i.size || "").trim(),
+      quantity: Math.max(0, Math.floor(Number(i.quantity) || 0)),
+      price: Number(i.price) || 0,
+      fit: i.fit ? String(i.fit).trim() : undefined,
+      color: i.color ? String(i.color).trim() : undefined,
+      image: i.image ? String(i.image).trim() : undefined,
+    }))
+    .filter((i) => i.productId && i.name && i.size && i.quantity > 0 && i.price >= 0);
+
+  if (sanitized.length === 0) {
+    return { error: "Order must contain at least one item." };
+  }
+
+  const owned = await getCustomerOrderById(orderId);
+  if (!owned) return { error: "Order not found." };
+  if (owned.status !== "pending") {
+    return { error: "Only pending orders can be changed." };
+  }
+
+  const productCheck = await validateProductsBeforeOrder(sanitized);
+  if (!productCheck.ok) return { error: productCheck.error };
+
+  const subtotal = sanitized.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const shippingCost =
+    subtotal >= CURRENCY.freeShippingThreshold ? 0 : CURRENCY.shippingCost;
+  const total = subtotal + shippingCost;
+
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      line_items: sanitized,
+      subtotal,
+      shipping_cost: shippingCost,
+      total,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", orderId)
+    .eq("customer_email", user.email.trim().toLowerCase())
+    .eq("status", "pending");
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/account");
+  revalidatePath(`/account/orders/${orderId}`);
+  revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${orderId}`);
+  return { ok: true };
 }

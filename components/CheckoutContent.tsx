@@ -217,6 +217,7 @@ export default function CheckoutContent({ userEmail, savedProfile }: CheckoutCon
                     price: i.price,
                     image: i.image,
                     ...(i.fit ? { fit: i.fit } : {}),
+                    ...(i.color ? { color: i.color } : {}),
                   })),
                   subtotal,
                   shipping_cost: shipping,
@@ -281,10 +282,13 @@ export default function CheckoutContent({ userEmail, savedProfile }: CheckoutCon
             <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">
               Order summary
             </h2>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Please confirm the exact items below before placing order.
+            </p>
             <ul className="mt-4 max-h-64 space-y-3 overflow-y-auto">
               {items.map((item) => (
                 <li
-                  key={`${item.productId}-${item.size}-${item.fit ?? ""}`}
+                  key={`${item.productId}-${item.size}-${item.fit ?? ""}-${item.color ?? ""}`}
                   className="flex gap-3"
                 >
                   <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded bg-[var(--muted-bg)]">
@@ -301,14 +305,32 @@ export default function CheckoutContent({ userEmail, savedProfile }: CheckoutCon
                     <p className="text-sm font-medium text-[var(--foreground)]">
                       {item.name}
                     </p>
-                    <p className="text-xs text-[var(--muted)]">
-                      {item.size}
-                      {item.fit ? ` · ${item.fit}` : ""} × {item.quantity}
+                    <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--muted)]">
+                      {item.color ? (
+                        <p>
+                          Color: <span className="text-[var(--foreground)]">{item.color}</span>
+                        </p>
+                      ) : null}
+                      <p>
+                        Size: <span className="text-[var(--foreground)]">{item.size}</span>
+                      </p>
+                      {item.fit ? (
+                        <p>
+                          Fit: <span className="text-[var(--foreground)]">{item.fit}</span>
+                        </p>
+                      ) : null}
+                      <p>
+                        Qty: <span className="text-[var(--foreground)]">{item.quantity}</span>
+                      </p>
+                    </div>
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      Unit: <span className="text-[var(--foreground)]">Rs. {item.price.toFixed(2)}</span>
                     </p>
                   </div>
-                  <p className="text-sm font-medium">
-                    Rs. {(item.price * item.quantity).toFixed(2)}
-                  </p>
+                  <div className="text-right">
+                    <p className="text-xs text-[var(--muted)]">Line total</p>
+                    <p className="text-sm font-medium">Rs. {(item.price * item.quantity).toFixed(2)}</p>
+                  </div>
                 </li>
               ))}
             </ul>

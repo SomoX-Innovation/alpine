@@ -45,4 +45,6 @@ export type CartItem = {
   quantity: number;
   /** When product offers multiple fits, line is keyed by size + fit */
   fit?: ProductFit;
+  /** Selected color name when product has colors */
+  color?: string;
 };

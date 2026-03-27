@@ -28,6 +28,11 @@ export default function EditProductForm({ product, categories = [], colors = [] 
   const [error, setError] = useState<string | null>(null);
   const [selectedFits, setSelectedFits] = useState<ProductFit[]>(() => initialFitsFromRow(product));
   const [imageUrl, setImageUrl] = useState(product.image);
+  const [galleryUrls, setGalleryUrls] = useState<string[]>(
+    Array.isArray(product.images)
+      ? product.images.filter((u): u is string => typeof u === "string" && u.trim().length > 0)
+      : []
+  );
   const [selectedColors, setSelectedColors] = useState<string[]>(Array.isArray(product.colors) ? product.colors : []);
   const [colorImages, setColorImages] = useState<Record<string, string>>(
     product.color_images && typeof product.color_images === "object"
@@ -53,7 +58,40 @@ export default function EditProductForm({ product, categories = [], colors = [] 
       setError(result.error);
       return;
     }
-    if (result.url) setImageUrl(result.url);
+    if (result.url) {
+      const url = result.url;
+      setImageUrl(url);
+      setGalleryUrls((prev) => (prev.includes(url) ? prev : [url, ...prev]));
+    }
+  }
+
+  async function handleGalleryUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    setUploading(true);
+    setError(null);
+    const uploaded: string[] = [];
+    for (const file of files) {
+      const formData = new FormData();
+      formData.set("file", file);
+      const result = await uploadProductImage(formData);
+      if (result.error) {
+        setUploading(false);
+        setError(result.error);
+        return;
+      }
+      if (result.url) uploaded.push(result.url);
+    }
+    setUploading(false);
+    setGalleryUrls((prev) => {
+      const seen = new Set(prev);
+      for (const u of uploaded) seen.add(u);
+      return Array.from(seen);
+    });
+  }
+
+  function removeGalleryUrl(url: string) {
+    setGalleryUrls((prev) => prev.filter((u) => u !== url));
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -67,6 +105,7 @@ export default function EditProductForm({ product, categories = [], colors = [] 
     selectedFits.forEach((f) => formData.append("fits", f));
     formData.set("color_images", JSON.stringify(colorImages));
     formData.set("image", imageUrl);
+    formData.set("images_json", JSON.stringify(galleryUrls));
     const result = await updateProduct(product.id, formData);
     if (result.error) {
       setError(result.error);
@@ -396,6 +435,36 @@ export default function EditProductForm({ product, categories = [], colors = [] 
           />
           {uploading && (
             <p className="mt-1 text-sm text-[var(--muted)]">Uploading…</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[var(--foreground)]">
+            Additional gallery images (auto WebP)
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleGalleryUpload}
+            disabled={uploading}
+            className="mt-2 block w-full text-sm text-[var(--muted)]"
+          />
+          {galleryUrls.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {galleryUrls.map((url) => (
+                <div key={url} className="flex items-center justify-between gap-2 rounded border border-[var(--border)] px-2 py-1">
+                  <p className="truncate text-xs text-[var(--muted)]">{url}</p>
+                  <button
+                    type="button"
+                    onClick={() => removeGalleryUrl(url)}
+                    className="text-xs text-red-500 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

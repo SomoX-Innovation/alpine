@@ -67,7 +67,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               fill
               unoptimized={isUnoptimized(src)}
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className={`absolute inset-0 object-cover transition-opacity duration-500 ${
+              className={`absolute inset-0 object-cover object-center transition-opacity duration-500 ${
                 i === index ? "opacity-100" : "opacity-0"
               }`}
               aria-hidden={i !== index}

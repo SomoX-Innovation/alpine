@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createServerClient } from "@/lib/supabase";
 import type { ProductFit } from "@/lib/types";
+import { convertUploadToWebp } from "@/lib/image-upload";
 
 const BUCKET = "product-images";
 
@@ -23,6 +24,33 @@ function normalizeSlug(value: string): string {
     .replace(/[^a-z0-9-]/g, "")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+function parseImagesFromForm(formData: FormData, mainImage: string): string[] {
+  const raw = (formData.get("images_json") as string)?.trim() || "[]";
+  let parsed: unknown = [];
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    parsed = [];
+  }
+
+  const seen = new Set<string>();
+  const out: string[] = [];
+  if (mainImage) {
+    seen.add(mainImage);
+    out.push(mainImage);
+  }
+  if (Array.isArray(parsed)) {
+    for (const v of parsed) {
+      if (typeof v !== "string") continue;
+      const u = v.trim();
+      if (!u || seen.has(u)) continue;
+      seen.add(u);
+      out.push(u);
+    }
+  }
+  return out;
 }
 
 async function getUniqueProductSlug(
@@ -60,12 +88,13 @@ export async function uploadProductImage(formData: FormData): Promise<{ url?: st
   if (!supabase) {
     return { error: "Storage not configured." };
   }
-  const ext = file.name.split(".").pop() || "jpg";
-  const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  const { data, error } = await supabase.storage.from(BUCKET).upload(path, buffer, {
-    contentType: file.type,
+  const converted = await convertUploadToWebp(file);
+  if (!converted.buffer) {
+    return { error: converted.error ?? "Image conversion failed." };
+  }
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+  const { data, error } = await supabase.storage.from(BUCKET).upload(path, converted.buffer, {
+    contentType: "image/webp",
     upsert: false,
   });
   if (error) {
@@ -111,6 +140,7 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
   const sizes = sizesStr.split(",").map((s) => s.trim()).filter(Boolean);
   const ordered_quantity = Math.max(0, Math.floor(Number(formData.get("ordered_quantity")) || 0));
   const image = (formData.get("image") as string)?.trim() || "";
+  const images = parseImagesFromForm(formData, image);
   const published = formData.get("published") === "on" || formData.get("published") === "true";
 
   if (!name || !slug) {
@@ -135,7 +165,7 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
       sizes,
       ordered_quantity,
       image: image || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
-      images: image ? [image] : [],
+      images,
       published,
     })
     .select("id")
@@ -191,6 +221,7 @@ export async function updateProduct(
   const sizes = sizesStr.split(",").map((s) => s.trim()).filter(Boolean);
   const ordered_quantity = Math.max(0, Math.floor(Number(formData.get("ordered_quantity")) || 0));
   const image = (formData.get("image") as string)?.trim() || "";
+  const images = parseImagesFromForm(formData, image);
   const published = formData.get("published") === "on" || formData.get("published") === "true";
 
   const { error } = await supabase
@@ -211,7 +242,7 @@ export async function updateProduct(
       sizes,
       ordered_quantity,
       image: image || undefined,
-      images: image ? [image] : [],
+      images,
       published,
       updated_at: new Date().toISOString(),
     })

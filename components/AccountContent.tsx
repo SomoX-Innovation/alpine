@@ -417,6 +417,9 @@ export default function AccountContent({
                             {previewName && (
                               <p className="mt-1 line-clamp-2 text-sm text-[var(--foreground)]">
                                 {previewName}
+                                {lines[0]?.color ? (
+                                  <span className="text-[var(--muted)]"> · {lines[0].color}</span>
+                                ) : null}
                                 {moreCount > 0 ? (
                                   <span className="text-[var(--muted)]"> · +{moreCount} more</span>
                                 ) : null}

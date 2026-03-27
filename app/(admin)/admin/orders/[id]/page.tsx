@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getOrderById } from "@/app/actions/orders";
 import OrderDetailForm from "../components/OrderDetailForm";
-import OrderLineItemsList from "@/components/OrderLineItemsList";
+import OrderItemsEditor from "../components/OrderItemsEditor";
 import OrderStatusTimeline from "@/components/OrderStatusTimeline";
 import OrderStatusBadge from "@/components/admin/OrderStatusBadge";
 
@@ -73,21 +73,18 @@ export default async function AdminOrderDetailPage({
             </p>
           </section>
           <section>
-            <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">
-              Items
-            </h2>
-            <OrderLineItemsList items={order.line_items ?? []} variant="compact" />
+            <OrderItemsEditor orderId={order.id} initialItems={order.line_items ?? []} />
             <dl className="mt-4 space-y-1 border-t border-[var(--border)] pt-4 text-sm">
               <div className="flex justify-between">
-                <dt className="text-[var(--muted)]">Subtotal</dt>
+                <dt className="text-[var(--muted)]">Current subtotal</dt>
                 <dd>Rs. {Number(order.subtotal).toFixed(2)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-[var(--muted)]">Shipping</dt>
+                <dt className="text-[var(--muted)]">Current shipping</dt>
                 <dd>Rs. {Number(order.shipping_cost).toFixed(2)}</dd>
               </div>
               <div className="flex justify-between font-semibold">
-                <dt>Total</dt>
+                <dt>Current total</dt>
                 <dd>Rs. {Number(order.total).toFixed(2)}</dd>
               </div>
             </dl>

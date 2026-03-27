@@ -6,7 +6,7 @@ import { getCustomerOrderById } from "@/app/actions/orders";
 import OrderStatusTimeline from "@/components/OrderStatusTimeline";
 import OrderStatusBadge from "@/components/OrderStatusBadge";
 import CopyOrderNumberButton from "@/components/CopyOrderNumberButton";
-import OrderLineItemsList from "@/components/OrderLineItemsList";
+import CustomerOrderEditor from "@/components/CustomerOrderEditor";
 
 export const metadata = {
   title: "Order details — Alpine",
@@ -125,15 +125,11 @@ export default async function CustomerOrderPage({
                 <p className="text-sm text-[var(--foreground)]">{order.shipping_address?.country}</p>
               </section>
 
-              <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-6">
-                <h2 className="text-base font-semibold uppercase tracking-wide text-[var(--foreground)]">
-                  Items
-                </h2>
-                <p className="mt-1 text-sm text-[var(--muted)]">
-                  What you ordered — photos match your selection at checkout.
-                </p>
-                <OrderLineItemsList items={order.line_items ?? []} variant="default" />
-              </section>
+              <CustomerOrderEditor
+                orderId={order.id}
+                initialItems={order.line_items ?? []}
+                editable={order.status === "pending"}
+              />
 
               {order.tracking_code && (
                 <section className="rounded-xl border border-[var(--accent)]/30 bg-[var(--muted-bg)]/50 p-5">

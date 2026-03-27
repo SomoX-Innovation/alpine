@@ -11,13 +11,14 @@ import {
 import type { CartItem, ProductFit } from "@/lib/types";
 
 function sameCartLine(
-  a: Pick<CartItem, "productId" | "size" | "fit">,
-  b: Pick<CartItem, "productId" | "size" | "fit">
+  a: Pick<CartItem, "productId" | "size" | "fit" | "color">,
+  b: Pick<CartItem, "productId" | "size" | "fit" | "color">
 ) {
   return (
     a.productId === b.productId &&
     a.size === b.size &&
-    (a.fit ?? "") === (b.fit ?? "")
+    (a.fit ?? "") === (b.fit ?? "") &&
+    (a.color ?? "") === (b.color ?? "")
   );
 }
 
@@ -25,8 +26,8 @@ type CartContextValue = {
   items: CartItem[];
   count: number;
   addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
-  removeItem: (productId: string, size: string, fit?: ProductFit) => void;
-  updateQuantity: (productId: string, size: string, quantity: number, fit?: ProductFit) => void;
+  removeItem: (productId: string, size: string, fit?: ProductFit, color?: string) => void;
+  updateQuantity: (productId: string, size: string, quantity: number, fit?: ProductFit, color?: string) => void;
   clearCart: () => void;
 };
 
@@ -78,23 +79,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const removeItem = useCallback((productId: string, size: string, fit?: ProductFit) => {
+  const removeItem = useCallback((productId: string, size: string, fit?: ProductFit, color?: string) => {
     setItems((prev) =>
       prev.filter(
-        (x) => !sameCartLine(x, { productId, size, fit })
+        (x) => !sameCartLine(x, { productId, size, fit, color })
       )
     );
   }, []);
 
   const updateQuantity = useCallback(
-    (productId: string, size: string, quantity: number, fit?: ProductFit) => {
+    (productId: string, size: string, quantity: number, fit?: ProductFit, color?: string) => {
       if (quantity < 1) {
-        removeItem(productId, size, fit);
+        removeItem(productId, size, fit, color);
         return;
       }
       setItems((prev) =>
         prev.map((x) =>
-          sameCartLine(x, { productId, size, fit })
+          sameCartLine(x, { productId, size, fit, color })
             ? { ...x, quantity }
             : x
         )

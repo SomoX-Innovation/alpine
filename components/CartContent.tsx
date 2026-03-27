@@ -43,7 +43,7 @@ export default function CartContent({ isSignedIn = false }: { isSignedIn?: boole
         <ul className="space-y-6 lg:col-span-2">
           {items.map((item) => (
             <li
-              key={`${item.productId}-${item.size}-${item.fit ?? ""}`}
+              key={`${item.productId}-${item.size}-${item.fit ?? ""}-${item.color ?? ""}`}
               className="flex gap-4 rounded-lg border border-[var(--border)] bg-[var(--card)] p-4"
             >
               <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-md bg-[var(--muted-bg)]">
@@ -63,16 +63,30 @@ export default function CartContent({ isSignedIn = false }: { isSignedIn?: boole
                 >
                   {item.name}
                 </Link>
-                <p className="mt-0.5 text-sm text-[var(--muted)]">
-                  Size: {item.size}
-                  {item.fit ? ` · Fit: ${item.fit}` : ""} · Rs. {item.price}
-                </p>
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--muted)]">
+                  {item.color ? (
+                    <p>
+                      Color: <span className="text-[var(--foreground)]">{item.color}</span>
+                    </p>
+                  ) : null}
+                  <p>
+                    Size: <span className="text-[var(--foreground)]">{item.size}</span>
+                  </p>
+                  {item.fit ? (
+                    <p>
+                      Fit: <span className="text-[var(--foreground)]">{item.fit}</span>
+                    </p>
+                  ) : null}
+                  <p>
+                    Unit price: <span className="text-[var(--foreground)]">Rs. {item.price.toFixed(2)}</span>
+                  </p>
+                </div>
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex items-center rounded border border-[var(--border)]">
                     <button
                       type="button"
                       onClick={() =>
-                        updateQuantity(item.productId, item.size, item.quantity - 1, item.fit)
+                        updateQuantity(item.productId, item.size, item.quantity - 1, item.fit, item.color)
                       }
                       className="flex h-8 w-8 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
                       aria-label="Decrease"
@@ -83,7 +97,7 @@ export default function CartContent({ isSignedIn = false }: { isSignedIn?: boole
                     <button
                       type="button"
                       onClick={() =>
-                        updateQuantity(item.productId, item.size, item.quantity + 1, item.fit)
+                        updateQuantity(item.productId, item.size, item.quantity + 1, item.fit, item.color)
                       }
                       className="flex h-8 w-8 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
                       aria-label="Increase"
@@ -93,7 +107,7 @@ export default function CartContent({ isSignedIn = false }: { isSignedIn?: boole
                   </div>
                   <button
                     type="button"
-                    onClick={() => removeItem(item.productId, item.size, item.fit)}
+                    onClick={() => removeItem(item.productId, item.size, item.fit, item.color)}
                     className="text-sm text-[var(--muted)] underline hover:text-[var(--foreground)]"
                   >
                     Remove
@@ -101,6 +115,7 @@ export default function CartContent({ isSignedIn = false }: { isSignedIn?: boole
                 </div>
               </div>
               <div className="text-right font-medium text-[var(--foreground)]">
+                <p className="text-xs text-[var(--muted)]">Line total</p>
                 Rs. {(item.price * item.quantity).toFixed(2)}
               </div>
             </li>

@@ -7,6 +7,7 @@ type MailOrderLineItem = {
   quantity: number;
   price: number;
   fit?: string;
+  color?: string;
 };
 
 type MailOrderPayload = {
@@ -151,6 +152,12 @@ export async function sendMail(options: {
   const from =
     process.env.MAIL_FROM?.trim() || `Alpine <${auth.user}>`;
 
+  const brandHtml = buildBrandedHtml({
+    subject: options.subject,
+    bodyHtml: options.html ?? options.text.replace(/\n/g, "<br />"),
+  });
+  const brandText = buildBrandedText(options.text);
+
   const maxAttempts = Number(process.env.MAIL_RETRY_ATTEMPTS || 3);
   let lastMessage = "";
 
@@ -160,8 +167,8 @@ export async function sendMail(options: {
         from,
         to: options.to,
         subject: options.subject,
-        text: options.text,
-        html: options.html ?? options.text.replace(/\n/g, "<br />"),
+        text: brandText,
+        html: brandHtml,
       });
       return { ok: true };
     } catch (e) {
@@ -193,11 +200,50 @@ export async function sendMail(options: {
   return { ok: false, error: lastMessage };
 }
 
+function buildBrandedHtml(params: { subject: string; bodyHtml: string }): string {
+  const subject = escapeHtml(params.subject);
+  const bodyHtml = params.bodyHtml;
+  const logoUrl = getMailLogoUrl();
+  const year = new Date().getFullYear();
+
+  return `<div style="background:#f5f5f5;padding:24px 12px;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111827">
+    <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
+      <div style="padding:20px 24px;border-bottom:1px solid #f3f4f6;background:#ffffff">
+        ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Alpine" style="display:block;max-height:42px;width:auto" />` : `<div style="font-size:22px;font-weight:700;letter-spacing:0.4px">Alpine</div>`}
+      </div>
+      <div style="padding:24px">
+        <h1 style="font-size:18px;line-height:1.3;margin:0 0 14px 0">${subject}</h1>
+        <div style="font-size:14px;line-height:1.7;color:#111827">
+          ${bodyHtml}
+        </div>
+      </div>
+      <div style="padding:14px 24px;border-top:1px solid #f3f4f6;background:#fafafa;font-size:12px;color:#6b7280">
+        © ${year} Alpine. All rights reserved.
+      </div>
+    </div>
+  </div>`;
+}
+
+function buildBrandedText(text: string): string {
+  const footer = "\n\n—\nAlpine";
+  return `${text}${footer}`;
+}
+
+function getMailLogoUrl(): string {
+  const explicit = process.env.MAIL_LOGO_URL?.trim();
+  if (explicit) return explicit;
+
+  const site = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
+  if (site) return `${site}/logo.png`;
+
+  return "";
+}
+
 function formatLineItems(items: MailOrderLineItem[]): string {
   return items
     .map(
       (i) =>
-        `  · ${i.name} — ${i.size}${i.fit ? ` (${i.fit})` : ""} × ${i.quantity}  Rs.${(i.price * i.quantity).toFixed(2)}`
+        `  · ${i.name} — ${i.color ? `${i.color} · ` : ""}${i.size}${i.fit ? ` (${i.fit})` : ""} × ${i.quantity}  Rs.${(i.price * i.quantity).toFixed(2)}`
     )
     .join("\n");
 }
@@ -250,7 +296,7 @@ export async function sendOrderConfirmationEmail(params: {
         ${input.line_items
           .map(
             (i) =>
-              `<li>${escapeHtml(i.name)} — ${escapeHtml(i.size)}${i.fit ? ` (${escapeHtml(i.fit)})` : ""} × ${i.quantity} — Rs.${(i.price * i.quantity).toFixed(2)}</li>`
+              `<li>${escapeHtml(i.name)} — ${i.color ? `${escapeHtml(i.color)} · ` : ""}${escapeHtml(i.size)}${i.fit ? ` (${escapeHtml(i.fit)})` : ""} × ${i.quantity} — Rs.${(i.price * i.quantity).toFixed(2)}</li>`
           )
           .join("")}
       </ul>

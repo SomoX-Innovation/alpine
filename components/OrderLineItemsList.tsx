@@ -31,7 +31,7 @@ export default function OrderLineItemsList({ items, variant = "default" }: Props
         const lineTotal = unit * qty;
         return (
           <li
-            key={`${item.productId}-${item.size}-${item.fit ?? ""}-${i}`}
+            key={`${item.productId}-${item.size}-${item.fit ?? ""}-${item.color ?? ""}-${i}`}
             className={
               isCompact
                 ? "flex gap-3 rounded-lg border border-[var(--border)] bg-[var(--card)] p-2.5"
@@ -68,6 +68,12 @@ export default function OrderLineItemsList({ items, variant = "default" }: Props
                 {item.name}
               </p>
               <p className="mt-1 text-sm text-[var(--muted)]">
+                {item.color ? (
+                  <>
+                    Color <span className="font-medium text-[var(--foreground)]">{item.color}</span>
+                    <span> · </span>
+                  </>
+                ) : null}
                 Size {item.size}
                 {item.fit ? ` · ${item.fit}` : ""}
                 <span className="text-[var(--foreground)]"> · Qty {qty}</span>

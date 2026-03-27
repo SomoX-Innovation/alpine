@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerClient } from "@/lib/supabase";
+import { convertUploadToWebp } from "@/lib/image-upload";
 
 const BUCKET = "category-images";
 
@@ -14,12 +15,13 @@ export async function uploadCategoryImage(formData: FormData): Promise<{ url?: s
     if (!supabase) {
         return { error: "Storage not configured." };
     }
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const { data, error } = await supabase.storage.from(BUCKET).upload(path, buffer, {
-        contentType: file.type,
+    const converted = await convertUploadToWebp(file);
+    if (!converted.buffer) {
+        return { error: converted.error ?? "Image conversion failed." };
+    }
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+    const { data, error } = await supabase.storage.from(BUCKET).upload(path, converted.buffer, {
+        contentType: "image/webp",
         upsert: false,
     });
     if (error) {

@@ -12,18 +12,22 @@ type ProductDetailProps = { product: Product };
 export default function ProductDetail({ product }: ProductDetailProps) {
   const fitsList = productFitList(product);
   const [selectedFit, setSelectedFit] = useState<ProductFit | null>(
-    fitsList.length >= 1 ? fitsList[0] : null
+    fitsList.length === 1 ? fitsList[0] : null
   );
   const [selectedSize, setSelectedSize] = useState<string>(product.sizes[0] ?? "One Size");
   const [selectedColor, setSelectedColor] = useState<string>(product.colors?.[0] ?? "");
   const maxQty = 99;
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const [isZooming, setIsZooming] = useState(false);
+  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
   const { addItem } = useCart();
   const images = product.images.length > 0 ? product.images : [product.image];
   const colorImage = selectedColor ? product.colorImages?.[selectedColor] : undefined;
   const mainImage = colorImage || images[0] || product.image;
   const useUnoptimized = mainImage.includes("/storage/v1/object/public/");
+  const fitRequired = fitsList.length > 1;
+  const canAddToCart = !fitRequired || selectedFit !== null;
 
   function handleAddToCart() {
     addItem({
@@ -34,9 +38,23 @@ export default function ProductDetail({ product }: ProductDetailProps) {
       size: selectedSize,
       quantity,
       ...(selectedFit ? { fit: selectedFit } : {}),
+      ...(product.colors && product.colors.length > 0 && selectedColor
+        ? { color: selectedColor }
+        : {}),
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
+  }
+
+  function handleImageMove(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setZoomPos({
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y)),
+    });
   }
 
   return (
@@ -64,7 +82,15 @@ export default function ProductDetail({ product }: ProductDetailProps) {
 
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
         {/* Gallery */}
-        <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-[var(--muted-bg)]">
+        <div
+          className="group relative aspect-[3/4] overflow-hidden rounded-xl bg-[var(--muted-bg)]"
+          onMouseEnter={() => setIsZooming(true)}
+          onMouseLeave={() => {
+            setIsZooming(false);
+            setZoomPos({ x: 50, y: 50 });
+          }}
+          onMouseMove={handleImageMove}
+        >
           <Image
             src={mainImage}
             alt={product.name}
@@ -72,7 +98,11 @@ export default function ProductDetail({ product }: ProductDetailProps) {
             priority
             unoptimized={useUnoptimized}
             sizes="(max-width: 1024px) 100vw, 50vw"
-            className="object-cover"
+            className="object-cover transition-transform duration-200 ease-out"
+            style={{
+              transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
+              transform: isZooming ? "scale(1.9)" : "scale(1)",
+            }}
           />
           {product.badge && (
             <span
@@ -226,6 +256,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
             <button
               type="button"
               onClick={handleAddToCart}
+              disabled={!canAddToCart}
               className="flex-1 rounded-md bg-[var(--foreground)] px-6 py-3.5 text-sm font-semibold text-[var(--background)] transition-colors hover:bg-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {added ? "Added to cart" : "Add to cart"}
@@ -237,6 +268,9 @@ export default function ProductDetail({ product }: ProductDetailProps) {
               View cart
             </Link>
           </div>
+          {fitRequired && !selectedFit && (
+            <p className="mt-2 text-xs text-red-500">Please select a fit (Regular or Oversize) before adding to cart.</p>
+          )}
 
           <ul className="mt-8 space-y-2 border-t border-[var(--border)] pt-8 text-sm text-[var(--muted)]">
             <li>Free shipping on orders over {CURRENCY.symbol} {CURRENCY.freeShippingThreshold.toLocaleString()}</li>
