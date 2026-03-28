@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createServerClient } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase-server";
-import { sendOrderConfirmationEmail } from "@/lib/mail";
+import { sendOrderPlacementEmails } from "@/lib/mail";
 import { CURRENCY, SHIPPING_COUNTRY } from "@/lib/currency";
 import { createServiceRoleClient } from "@/lib/supabase-service";
 
@@ -215,19 +215,23 @@ export async function createOrder(input: CreateOrderInput): Promise<{
   revalidatePath("/admin/products");
   revalidatePath("/");
 
-  void sendOrderConfirmationEmail({
-    orderNumber: inserted.order_number,
-    orderId: inserted.id,
-    customerEmail: customer_email,
-    customerName: customer_name,
-    input: {
-      line_items: input.line_items,
-      subtotal: input.subtotal,
-      shipping_cost: input.shipping_cost,
-      total: input.total,
-      shipping_address: input.shipping_address,
-    },
-  });
+  try {
+    await sendOrderPlacementEmails({
+      orderNumber: inserted.order_number,
+      orderId: inserted.id,
+      customerEmail: customer_email,
+      customerName: customer_name,
+      input: {
+        line_items: input.line_items,
+        subtotal: input.subtotal,
+        shipping_cost: input.shipping_cost,
+        total: input.total,
+        shipping_address: input.shipping_address,
+      },
+    });
+  } catch (e) {
+    console.error("[mail] sendOrderPlacementEmails:", e);
+  }
 
   revalidatePath("/admin");
   revalidatePath("/admin/orders");

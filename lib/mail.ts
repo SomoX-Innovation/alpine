@@ -32,12 +32,17 @@ type MailOrderPayload = {
  *
  * Optional:
  *   MAIL_FROM="Alpine Store <you@gmail.com>"
+ *   MAIL_ORDER_NOTIFY=you@example.com   (comma-separated) — new-order alert to you; defaults to GMAIL_USER/SMTP_USER
  *   SMTP_HOST=smtp.gmail.com
  *   SMTP_PORT=465
  *   SMTP_SECURE=true
  *
  * For auth emails (signup, password reset), also configure Custom SMTP in
  * Supabase Dashboard → Authentication → SMTP Settings with the same Gmail creds.
+ *
+ * Order emails (customer confirmation + store alert) are sent by THIS app only.
+ * Supabase SMTP does not send them — copy the same username/password into Vercel
+ * as GMAIL_USER + GMAIL_APP_PASSWORD (or SMTP_USER + SMTP_PASS).
  */
 
 function getSmtpAuth(): { user: string; pass: string } | null {
@@ -48,6 +53,7 @@ function getSmtpAuth(): { user: string; pass: string } | null {
   const pass =
     process.env.GMAIL_APP_PASSWORD?.replace(/\s/g, "") ||
     process.env.SMTP_PASS?.trim() ||
+    process.env.SMTP_PASSWORD?.trim() ||
     "";
   if (!user || !pass) return null;
   return { user, pass };
@@ -134,6 +140,23 @@ export function isOrderConfirmationEmailEnabled(): boolean {
   return true;
 }
 
+/** Store owner / ops inbox for “new order placed” alerts. */
+function getOrderNotifyRecipients(): string[] {
+  const raw = process.env.MAIL_ORDER_NOTIFY?.trim();
+  if (raw) {
+    return [...new Set(raw.split(/[,;]/).map((e) => e.trim().toLowerCase()).filter(Boolean))];
+  }
+  const u = process.env.GMAIL_USER?.trim() || process.env.SMTP_USER?.trim();
+  return u ? [u.toLowerCase()] : [];
+}
+
+/** Set MAIL_STORE_ORDER_NOTIFY=false to skip store alert while still emailing the customer. */
+export function isStoreOrderNotifyEnabled(): boolean {
+  if (process.env.MAIL_STORE_ORDER_NOTIFY === "false") return false;
+  if (process.env.MAIL_DISABLE_ORDER_EMAIL === "true") return false;
+  return true;
+}
+
 export async function sendMail(options: {
   to: string;
   subject: string;
@@ -150,7 +173,9 @@ export async function sendMail(options: {
   }
 
   const from =
-    process.env.MAIL_FROM?.trim() || `Alpine <${auth.user}>`;
+    process.env.MAIL_FROM?.trim() ||
+    process.env.EMAIL_FROM?.trim() ||
+    `Alpine <${auth.user}>`;
 
   const brandHtml = buildBrandedHtml({
     subject: options.subject,
@@ -248,6 +273,59 @@ function formatLineItems(items: MailOrderLineItem[]): string {
     .join("\n");
 }
 
+function normalizeMailPayload(input: MailOrderPayload): MailOrderPayload {
+  const line_items = input.line_items.map((i) => ({
+    name: String(i.name ?? "").trim() || "Item",
+    size: String(i.size ?? "").trim() || "—",
+    quantity: Math.max(0, Math.floor(Number(i.quantity) || 0)),
+    price: Math.max(0, Number(i.price) || 0),
+    ...(i.fit ? { fit: String(i.fit).trim() } : {}),
+    ...(i.color ? { color: String(i.color).trim() } : {}),
+  }));
+  return {
+    line_items,
+    subtotal: Number(input.subtotal) || 0,
+    shipping_cost: Number(input.shipping_cost) || 0,
+    total: Number(input.total) || 0,
+    shipping_address: {
+      address: String(input.shipping_address?.address ?? "").trim(),
+      city: String(input.shipping_address?.city ?? "").trim(),
+      postalCode: String(input.shipping_address?.postalCode ?? "").trim(),
+      country: String(input.shipping_address?.country ?? "").trim(),
+    },
+  };
+}
+
+/**
+ * Sends customer confirmation + store new-order alert in parallel.
+ * Await this from createOrder so serverless runtimes finish before freezing (e.g. Vercel).
+ * Does not throw — logs on failure.
+ */
+export async function sendOrderPlacementEmails(params: {
+  orderNumber: string;
+  orderId: string;
+  customerEmail: string;
+  customerName: string;
+  input: MailOrderPayload;
+}): Promise<void> {
+  if (!isMailConfigured()) {
+    console.warn(
+      "[mail] Order emails skipped: SMTP not set. Add GMAIL_USER + GMAIL_APP_PASSWORD (or SMTP_USER + SMTP_PASS / SMTP_PASSWORD) to .env.local and Vercel. Supabase Auth SMTP alone does not send order emails."
+    );
+    return;
+  }
+
+  const normalized = {
+    ...params,
+    input: normalizeMailPayload(params.input),
+  };
+
+  await Promise.all([
+    sendOrderConfirmationEmail(normalized),
+    sendStoreNewOrderNotification(normalized),
+  ]);
+}
+
 /** Fire-and-forget friendly: does not throw. */
 export async function sendOrderConfirmationEmail(params: {
   orderNumber: string;
@@ -318,6 +396,85 @@ export async function sendOrderConfirmationEmail(params: {
       );
     } else {
       console.error("[mail] order confirmation:", result.error);
+    }
+  }
+}
+
+/** Notify shop inbox when a customer places an order (fire-and-forget). */
+export async function sendStoreNewOrderNotification(params: {
+  orderNumber: string;
+  orderId: string;
+  customerEmail: string;
+  customerName: string;
+  input: MailOrderPayload;
+}): Promise<void> {
+  if (!isStoreOrderNotifyEnabled() || !isMailConfigured()) {
+    return;
+  }
+
+  const recipients = getOrderNotifyRecipients();
+  if (recipients.length === 0) {
+    return;
+  }
+
+  const { orderNumber, orderId, customerEmail, customerName, input } = params;
+  const lines = formatLineItems(input.line_items);
+  const addr = input.shipping_address;
+
+  const text = [
+    `New order placed: ${orderNumber}`,
+    ``,
+    `Customer: ${customerName}`,
+    `Email: ${customerEmail}`,
+    ``,
+    `Items:`,
+    lines,
+    ``,
+    `Subtotal: Rs.${input.subtotal.toFixed(2)}`,
+    `Shipping: Rs.${input.shipping_cost.toFixed(2)}`,
+    `Total: Rs.${input.total.toFixed(2)}`,
+    ``,
+    `Ship to:`,
+    `${addr.address}`,
+    `${addr.postalCode} ${addr.city}`,
+    `${addr.country}`,
+    ``,
+    `Order ID: ${orderId}`,
+  ].join("\n");
+
+  const bodyHtml = `<p><strong>New order</strong> <strong>${escapeHtml(orderNumber)}</strong></p>
+      <p>Customer: ${escapeHtml(customerName)}<br/>Email: ${escapeHtml(customerEmail)}</p>
+      <h3 style="font-size:14px;margin:1rem 0 0.5rem">Items</h3>
+      <ul style="margin:0;padding-left:1.25rem">
+        ${input.line_items
+          .map(
+            (i) =>
+              `<li>${escapeHtml(i.name)} — ${i.color ? `${escapeHtml(i.color)} · ` : ""}${escapeHtml(i.size)}${i.fit ? ` (${escapeHtml(i.fit)})` : ""} × ${i.quantity} — Rs.${(i.price * i.quantity).toFixed(2)}</li>`
+          )
+          .join("")}
+      </ul>
+      <p style="margin-top:1rem">Subtotal: Rs.${input.subtotal.toFixed(2)}<br/>
+      Shipping: Rs.${input.shipping_cost.toFixed(2)}<br/>
+      <strong>Total: Rs.${input.total.toFixed(2)}</strong></p>
+      <h3 style="font-size:14px;margin:1rem 0 0.5rem">Ship to</h3>
+      <p style="margin:0">${escapeHtml(addr.address)}<br/>
+      ${escapeHtml(addr.postalCode)} ${escapeHtml(addr.city)}<br/>
+      ${escapeHtml(addr.country)}</p>
+      <p style="margin-top:1rem;font-size:12px;color:#6b7280">Order ID: ${escapeHtml(orderId)}</p>`;
+
+  for (const to of recipients) {
+    const result = await sendMail({
+      to,
+      subject: `New order — ${orderNumber}`,
+      text,
+      html: bodyHtml,
+    });
+    if (!result.ok && !("skipped" in result && result.skipped)) {
+      if ("rateLimited" in result && result.rateLimited) {
+        console.error("[mail] store order notify skipped (quota):", orderNumber);
+      } else {
+        console.error("[mail] store order notify:", to, result.error);
+      }
     }
   }
 }
