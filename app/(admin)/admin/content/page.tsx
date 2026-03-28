@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { uploadProductImage } from "../actions/products";
-import { updateHeroImage, updateFaq, updateDtfImages, updateNewDesignImage, updateSizeChartImages } from "../actions/settings";
+import { updateHeroImage, updateFaq, updateDtfImages, updateNewDesignImage, updateSizeChartImages, updateOrderNotifyEmails } from "../actions/settings";
 import { createClient } from "@/lib/supabase";
 
 export default function AdminContentPage() {
@@ -26,6 +26,10 @@ export default function AdminContentPage() {
     const [sizeChartOversized, setSizeChartOversized] = useState("");
     const [sizeChartError, setSizeChartError] = useState<string | null>(null);
     const [sizeChartSuccess, setSizeChartSuccess] = useState(false);
+
+    const [orderNotifyEmails, setOrderNotifyEmails] = useState<string[]>([]);
+    const [orderNotifyError, setOrderNotifyError] = useState<string | null>(null);
+    const [orderNotifySuccess, setOrderNotifySuccess] = useState(false);
 
     useEffect(() => {
         async function fetchSettings() {
@@ -101,6 +105,24 @@ export default function AdminContentPage() {
                 .single();
             if (oversizedChartData?.value) {
                 setSizeChartOversized(oversizedChartData.value);
+            }
+
+            const { data: notifyData } = await supabase
+                .from("settings")
+                .select("value")
+                .eq("key", "order_notify_emails")
+                .single();
+            if (notifyData?.value) {
+                try {
+                    const parsed = JSON.parse(notifyData.value);
+                    if (Array.isArray(parsed)) {
+                        setOrderNotifyEmails(
+                            parsed.filter((e: unknown) => typeof e === "string" && String(e).trim().length > 0).map((e: string) => String(e).trim())
+                        );
+                    }
+                } catch {
+                    setOrderNotifyEmails([]);
+                }
             }
             setLoading(false);
         }
@@ -233,6 +255,25 @@ export default function AdminContentPage() {
         else setSizeChartSuccess(true);
     }
 
+    function addOrderNotifyEmail() {
+        setOrderNotifyEmails([...orderNotifyEmails, ""]);
+    }
+    function updateOrderNotifyRow(index: number, value: string) {
+        const next = [...orderNotifyEmails];
+        next[index] = value;
+        setOrderNotifyEmails(next);
+    }
+    function removeOrderNotifyRow(index: number) {
+        setOrderNotifyEmails(orderNotifyEmails.filter((_, i) => i !== index));
+    }
+    async function saveOrderNotifyEmails() {
+        setOrderNotifyError(null);
+        setOrderNotifySuccess(false);
+        const res = await updateOrderNotifyEmails(orderNotifyEmails);
+        if (res.error) setOrderNotifyError(res.error);
+        else setOrderNotifySuccess(true);
+    }
+
     if (loading) {
         return <div className="p-4 text-[var(--muted)]">Loading settings...</div>;
     }
@@ -244,9 +285,71 @@ export default function AdminContentPage() {
                     Content & Settings
                 </h1>
                 <p className="mt-1 text-sm text-[var(--muted)]">
-                    Manage homepage hero sections, FAQ, and global settings.
+                    Manage homepage hero sections, FAQ, order alerts, and global settings.
                 </p>
             </div>
+
+            {/* Order notification emails */}
+            <section className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-6">
+                <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">
+                    Order notification emails
+                </h2>
+                <p className="mt-1 text-sm text-[var(--muted)] max-w-2xl">
+                    When a customer places an order, these addresses receive a “You have a new order” email with order details.
+                    You can add multiple admins. This list is merged with optional{" "}
+                    <code className="rounded bg-[var(--muted-bg)] px-1 text-xs">MAIL_ORDER_NOTIFY</code> in env; if both are empty,
+                    the SMTP account email (<code className="rounded bg-[var(--muted-bg)] px-1 text-xs">GMAIL_USER</code>) is used.
+                    Requires <code className="rounded bg-[var(--muted-bg)] px-1 text-xs">GMAIL_USER</code> + app password on the server (Vercel / .env.local).
+                </p>
+                <div className="mt-6 space-y-4 max-w-xl">
+                    {orderNotifyError && (
+                        <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-500">{orderNotifyError}</p>
+                    )}
+                    {orderNotifySuccess && (
+                        <p className="rounded-md bg-green-500/10 px-3 py-2 text-sm text-green-500">
+                            Notification list saved.
+                        </p>
+                    )}
+                    {orderNotifyEmails.length === 0 && (
+                        <p className="text-sm text-[var(--muted)]">No addresses yet — add at least one, or rely on env fallback.</p>
+                    )}
+                    {orderNotifyEmails.map((email, i) => (
+                        <div key={i} className="flex gap-2 items-center">
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => updateOrderNotifyRow(i, e.target.value)}
+                                placeholder="admin@example.com"
+                                className="flex-1 rounded border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none"
+                                autoComplete="email"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => removeOrderNotifyRow(i)}
+                                className="shrink-0 rounded border border-[var(--border)] px-3 py-2 text-sm text-red-500 hover:bg-[var(--muted-bg)]"
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    ))}
+                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={addOrderNotifyEmail}
+                            className="rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
+                        >
+                            + Add email
+                        </button>
+                        <button
+                            type="button"
+                            onClick={saveOrderNotifyEmails}
+                            className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)] hover:bg-[var(--accent)]"
+                        >
+                            Save notification list
+                        </button>
+                    </div>
+                </div>
+            </section>
 
             {/* Hero Section */}
             <section className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-6">

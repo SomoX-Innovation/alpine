@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { getOrderNotifyEmailsFromSettings } from "@/lib/settings-db";
 
 /** Mirrors order line items for email formatting (avoids circular import with orders action). */
 type MailOrderLineItem = {
@@ -32,7 +33,7 @@ type MailOrderPayload = {
  *
  * Optional:
  *   MAIL_FROM="Alpine Store <you@gmail.com>"
- *   MAIL_ORDER_NOTIFY=you@example.com   (comma-separated) — new-order alert to you; defaults to GMAIL_USER/SMTP_USER
+ *   MAIL_ORDER_NOTIFY=you@example.com   (comma-separated) — extra recipients; merged with Admin → Content → order emails
  *   SMTP_HOST=smtp.gmail.com
  *   SMTP_PORT=465
  *   SMTP_SECURE=true
@@ -140,14 +141,35 @@ export function isOrderConfirmationEmailEnabled(): boolean {
   return true;
 }
 
-/** Store owner / ops inbox for “new order placed” alerts. */
-function getOrderNotifyRecipients(): string[] {
-  const raw = process.env.MAIL_ORDER_NOTIFY?.trim();
-  if (raw) {
-    return [...new Set(raw.split(/[,;]/).map((e) => e.trim().toLowerCase()).filter(Boolean))];
+const EMAIL_LIKE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Merges Admin Content emails, MAIL_ORDER_NOTIFY, then SMTP login as last resort. */
+async function resolveOrderNotifyRecipients(): Promise<string[]> {
+  const fromSettings = await getOrderNotifyEmailsFromSettings();
+  const envRaw = process.env.MAIL_ORDER_NOTIFY?.trim();
+  const fromEnv = envRaw
+    ? envRaw
+        .split(/[,;]/)
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => EMAIL_LIKE.test(e))
+    : [];
+  const smtpUser =
+    process.env.GMAIL_USER?.trim().toLowerCase() ||
+    process.env.SMTP_USER?.trim().toLowerCase() ||
+    "";
+
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const e of [...fromSettings, ...fromEnv]) {
+    if (e && !seen.has(e)) {
+      seen.add(e);
+      out.push(e);
+    }
   }
-  const u = process.env.GMAIL_USER?.trim() || process.env.SMTP_USER?.trim();
-  return u ? [u.toLowerCase()] : [];
+  if (out.length === 0 && smtpUser && EMAIL_LIKE.test(smtpUser)) {
+    out.push(smtpUser);
+  }
+  return out;
 }
 
 /** Set MAIL_STORE_ORDER_NOTIFY=false to skip store alert while still emailing the customer. */
@@ -412,7 +434,7 @@ export async function sendStoreNewOrderNotification(params: {
     return;
   }
 
-  const recipients = getOrderNotifyRecipients();
+  const recipients = await resolveOrderNotifyRecipients();
   if (recipients.length === 0) {
     return;
   }
@@ -422,7 +444,7 @@ export async function sendStoreNewOrderNotification(params: {
   const addr = input.shipping_address;
 
   const text = [
-    `New order placed: ${orderNumber}`,
+    `You have a new order: ${orderNumber}`,
     ``,
     `Customer: ${customerName}`,
     `Email: ${customerEmail}`,
@@ -442,7 +464,7 @@ export async function sendStoreNewOrderNotification(params: {
     `Order ID: ${orderId}`,
   ].join("\n");
 
-  const bodyHtml = `<p><strong>New order</strong> <strong>${escapeHtml(orderNumber)}</strong></p>
+  const bodyHtml = `<p><strong>You have a new order</strong> — <strong>${escapeHtml(orderNumber)}</strong></p>
       <p>Customer: ${escapeHtml(customerName)}<br/>Email: ${escapeHtml(customerEmail)}</p>
       <h3 style="font-size:14px;margin:1rem 0 0.5rem">Items</h3>
       <ul style="margin:0;padding-left:1.25rem">
@@ -465,7 +487,7 @@ export async function sendStoreNewOrderNotification(params: {
   for (const to of recipients) {
     const result = await sendMail({
       to,
-      subject: `New order — ${orderNumber}`,
+      subject: `You have a new order — ${orderNumber}`,
       text,
       html: bodyHtml,
     });

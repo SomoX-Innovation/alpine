@@ -1,5 +1,7 @@
 import { createServerClient } from "@/lib/supabase";
 
+const SIMPLE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function getSetting(key: string, defaultValue: string = ""): Promise<string> {
     const supabase = createServerClient();
     if (!supabase) return defaultValue;
@@ -55,6 +57,28 @@ export async function getFaqData(): Promise<{ q: string; a: string }[]> {
     } catch {
         return defaultFaq;
     }
+}
+
+/** Admin-configured in Content → “Order notification emails” (JSON array or plain lines). */
+export async function getOrderNotifyEmailsFromSettings(): Promise<string[]> {
+    const raw = (await getSetting("order_notify_emails", "")).trim();
+    if (!raw) return [];
+    try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+            const emails = parsed
+                .map((x) => String(x ?? "").trim().toLowerCase())
+                .filter((e) => SIMPLE_EMAIL.test(e));
+            return [...new Set(emails)];
+        }
+    } catch {
+        // treat as newline/comma-separated list
+    }
+    const emails = raw
+        .split(/[\n,;]+/)
+        .map((s) => s.trim().toLowerCase())
+        .filter((e) => SIMPLE_EMAIL.test(e));
+    return [...new Set(emails)];
 }
 
 export async function getDtfImages(): Promise<string[]> {

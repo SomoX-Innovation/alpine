@@ -65,6 +65,24 @@ export async function updateNewDesignImage(imageUrl: string): Promise<{ error?: 
     return res;
 }
 
+const ORDER_NOTIFY_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Who receives “New order” emails when a customer checks out. */
+export async function updateOrderNotifyEmails(emails: string[]): Promise<{ error?: string }> {
+    const cleaned = [
+        ...new Set(
+            emails
+                .map((e) => e.trim().toLowerCase())
+                .filter((e) => e.length > 0 && ORDER_NOTIFY_EMAIL.test(e))
+        ),
+    ];
+    const res = await updateSetting("order_notify_emails", JSON.stringify(cleaned));
+    if (!res.error) {
+        revalidatePath("/admin/content");
+    }
+    return res;
+}
+
 export async function updateSizeChartImages(regularImageUrl: string, oversizedImageUrl: string): Promise<{ error?: string }> {
     const a = await updateSetting("size_chart_regular_image", regularImageUrl);
     if (a.error) return a;
