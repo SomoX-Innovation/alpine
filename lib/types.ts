@@ -1,7 +1,28 @@
+import { CURRENCY } from "@/lib/currency";
+
 export type ProductCategory = "Women" | "Men" | "Unisex" | "DTF";
 
 /** Filter-only (not in nav): Oversize, Regular */
 export type ProductFit = "Oversize" | "Regular";
+
+/** Regular uses `price`; Oversize uses `priceOversize` when set, else same as regular. */
+export type ProductPricing = {
+  price: number;
+  priceOversize?: number | null;
+};
+
+export function priceForFit(pricing: ProductPricing, fit?: ProductFit | null): number {
+  const regular = Number(pricing.price) || 0;
+  if (fit === "Oversize") {
+    const po = pricing.priceOversize;
+    if (po != null && Number.isFinite(Number(po))) return Number(po);
+  }
+  return regular;
+}
+
+export function formatPriceForFit(pricing: ProductPricing, fit?: ProductFit | null): string {
+  return CURRENCY.format(priceForFit(pricing, fit));
+}
 
 export type Product = {
   id: string;
@@ -9,6 +30,8 @@ export type Product = {
   slug: string;
   price: number;
   priceFormatted: string;
+  /** When set, Oversize fit uses this price; Regular always uses `price`. */
+  priceOversize?: number | null;
   compareAtPrice?: number;
   category: ProductCategory;
   image: string;
@@ -39,7 +62,12 @@ export function productFitList(product: Product): ProductFit[] {
 export type CartItem = {
   productId: string;
   name: string;
+  /** Regular (list) price from catalog */
   price: number;
+  /**
+   * Oversize price when set on the product. Omitted in older localStorage carts — then `price` is treated as the stored unit price.
+   */
+  priceOversize?: number | null;
   image: string;
   size: string;
   quantity: number;
@@ -48,3 +76,14 @@ export type CartItem = {
   /** Selected color name when product has colors */
   color?: string;
 };
+
+/** Unit price for a cart line (handles Regular vs Oversize when `priceOversize` is present). */
+export function cartLineUnitPrice(item: CartItem): number {
+  if (item.priceOversize === undefined) {
+    return Number(item.price) || 0;
+  }
+  return priceForFit(
+    { price: item.price, priceOversize: item.priceOversize },
+    item.fit
+  );
+}

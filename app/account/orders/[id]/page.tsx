@@ -125,6 +125,23 @@ export default async function CustomerOrderPage({
                 <p className="text-sm text-[var(--foreground)]">{order.shipping_address?.country}</p>
               </section>
 
+              {order.invoice_path && (
+                <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+                    Invoice
+                  </h2>
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    Download your invoice PDF.
+                  </p>
+                  <a
+                    href={`/api/invoice/${order.id}`}
+                    className="mt-3 inline-flex rounded-md bg-[var(--foreground)] px-4 py-2.5 text-sm font-semibold text-[var(--background)] hover:bg-[var(--accent)]"
+                  >
+                    Download invoice (PDF)
+                  </a>
+                </section>
+              )}
+
               <CustomerOrderEditor
                 orderId={order.id}
                 initialItems={order.line_items ?? []}

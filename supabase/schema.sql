@@ -49,6 +49,7 @@ create table if not exists public.products (
   slug text not null unique,
   description text not null default '',
   price numeric not null check (price >= 0),
+  price_oversize numeric check (price_oversize is null or price_oversize >= 0),
   compare_at_price numeric check (compare_at_price is null or compare_at_price >= 0),
   category text not null,
   badge text check (badge is null or badge in ('New', 'Sale')),
@@ -78,6 +79,7 @@ alter table public.products add column if not exists color_images jsonb not null
 alter table public.products add column if not exists fits jsonb not null default '[]'::jsonb;
 alter table public.products add column if not exists ordered_quantity integer not null default 0;
 alter table public.products add column if not exists item_code text;
+alter table public.products add column if not exists price_oversize numeric check (price_oversize is null or price_oversize >= 0);
 alter table public.products add column if not exists quantity integer not null default 0;
 
 -- Legacy: migrate old `color` text column into `colors` jsonb if it still exists
@@ -125,6 +127,8 @@ create table if not exists public.orders (
   payment_method text not null default 'card' check (payment_method in ('card', 'cod')),
   tracking_code text,
   tracking_carrier text,
+  -- Invoice PDF stored in Supabase Storage (bucket: invoices)
+  invoice_path text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -214,6 +218,10 @@ create sequence if not exists order_number_seq start 1001;
 -- -----------------------------------------------------------------------------
 insert into storage.buckets (id, name, public)
 values ('product-images', 'product-images', true)
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public)
+values ('invoices', 'invoices', false)
 on conflict (id) do nothing;
 
 drop policy if exists "Public read product-images" on storage.objects;

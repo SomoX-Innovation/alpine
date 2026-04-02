@@ -1,19 +1,27 @@
 import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getOrderById } from "@/app/actions/orders";
+import { getAllProducts } from "@/lib/products-db";
+import { productRowsToAdminOrderProducts } from "@/lib/admin-order-product-search";
 import OrderDetailForm from "../components/OrderDetailForm";
-import OrderItemsEditor from "../components/OrderItemsEditor";
+import OrderItemsEditorClient from "../components/OrderItemsEditorClient";
 import OrderStatusTimeline from "@/components/OrderStatusTimeline";
 import OrderStatusBadge from "@/components/admin/OrderStatusBadge";
+import { generateInvoiceForOrder } from "@/app/actions/orders";
 
 export default async function AdminOrderDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ inv?: string }>;
 }) {
   const { id } = await params;
-  const order = await getOrderById(id);
+  const sp = await searchParams;
+  const [order, productRows] = await Promise.all([getOrderById(id), getAllProducts(false)]);
   if (!order) notFound();
+  const adminProducts = productRowsToAdminOrderProducts(productRows);
 
   return (
     <div>
@@ -42,6 +50,50 @@ export default async function AdminOrderDetailPage({
         <div className="space-y-6">
           <section className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-5">
             <OrderStatusTimeline status={order.status} />
+          </section>
+          <section className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-5">
+            <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">Invoice</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Download the invoice PDF (branded with your logo). If it’s missing, generate it.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              {order.invoice_path ? (
+                <a
+                  href={`/api/invoice/${order.id}`}
+                  className="inline-flex rounded-md bg-[var(--foreground)] px-4 py-2 text-sm font-semibold text-[var(--background)] hover:bg-[var(--accent)]"
+                >
+                  Download invoice (PDF)
+                </a>
+              ) : (
+                <form
+                  action={async () => {
+                    "use server";
+                    const res = await generateInvoiceForOrder(order.id);
+                    if (res.error) {
+                      redirect(`/admin/orders/${order.id}?inv=${encodeURIComponent(res.error)}`);
+                    }
+                    redirect(`/admin/orders/${order.id}?inv=generated`);
+                  }}
+                >
+                  <button
+                    type="submit"
+                    className="inline-flex rounded-md bg-[var(--foreground)] px-4 py-2 text-sm font-semibold text-[var(--background)] hover:bg-[var(--accent)]"
+                  >
+                    Generate invoice PDF
+                  </button>
+                </form>
+              )}
+            </div>
+            {sp.inv && (
+              <p className={`mt-2 text-xs ${sp.inv === "generated" ? "text-emerald-500" : "text-red-500"}`}>
+                {sp.inv === "generated" ? "Invoice generated successfully." : sp.inv}
+              </p>
+            )}
+            {order.invoice_path ? (
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                Stored at: <span className="font-mono">{order.invoice_path}</span>
+              </p>
+            ) : null}
           </section>
           <section>
             <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">
@@ -73,7 +125,7 @@ export default async function AdminOrderDetailPage({
             </p>
           </section>
           <section>
-            <OrderItemsEditor orderId={order.id} initialItems={order.line_items ?? []} />
+            <OrderItemsEditorClient orderId={order.id} initialItems={order.line_items ?? []} products={adminProducts} />
             <dl className="mt-4 space-y-1 border-t border-[var(--border)] pt-4 text-sm">
               <div className="flex justify-between">
                 <dt className="text-[var(--muted)]">Current subtotal</dt>

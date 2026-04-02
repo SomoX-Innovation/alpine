@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { CURRENCY } from "@/lib/currency";
-import { productFitList, type Product, type ProductFit } from "@/lib/types";
+import {
+  formatPriceForFit,
+  productFitList,
+  type Product,
+  type ProductFit,
+} from "@/lib/types";
 
 type ProductDetailProps = { product: Product };
 
@@ -22,6 +27,24 @@ export default function ProductDetail({ product }: ProductDetailProps) {
   const [isZooming, setIsZooming] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
   const { addItem } = useCart();
+  const hasDualFitPrice =
+    fitsList.includes("Regular") &&
+    fitsList.includes("Oversize") &&
+    product.priceOversize != null &&
+    Number.isFinite(Number(product.priceOversize)) &&
+    Math.abs(Number(product.priceOversize) - product.price) > 0.005;
+  const displayFit: ProductFit | null = useMemo(() => {
+    if (fitsList.length === 0) return null;
+    if (fitsList.length === 1) return fitsList[0];
+    return selectedFit;
+  }, [fitsList, selectedFit]);
+  const displayPriceFormatted = useMemo(() => {
+    if (hasDualFitPrice && displayFit === null) {
+      return `${formatPriceForFit(product, "Regular")} · ${formatPriceForFit(product, "Oversize")}`;
+    }
+    if (displayFit) return formatPriceForFit(product, displayFit);
+    return product.priceFormatted;
+  }, [product, hasDualFitPrice, displayFit]);
   const images = product.images.length > 0 ? product.images : [product.image];
   const colorImage = selectedColor ? product.colorImages?.[selectedColor] : undefined;
   const mainImage = colorImage || images[0] || product.image;
@@ -34,6 +57,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
       productId: product.id,
       name: product.name,
       price: product.price,
+      priceOversize: product.priceOversize ?? null,
       image: mainImage,
       size: selectedSize,
       quantity,
@@ -124,9 +148,9 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           <h1 className="font-display mt-1 text-3xl font-semibold text-[var(--foreground)] sm:text-4xl">
             {product.name}
           </h1>
-          <div className="mt-4 flex items-center gap-3">
+          <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="text-xl font-semibold text-[var(--foreground)]">
-              {product.priceFormatted}
+              {displayPriceFormatted}
             </span>
             {product.compareAtPrice != null && (
               <span className="text-base text-[var(--muted)] line-through">
@@ -152,6 +176,12 @@ export default function ProductDetail({ product }: ProductDetailProps) {
               <p className="mt-1 text-xs text-[var(--muted)]">
                 Same photos apply to every fit; choose how you want this item listed in your order.
               </p>
+              {hasDualFitPrice && (
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  Regular {formatPriceForFit(product, "Regular")} · Oversize{" "}
+                  {formatPriceForFit(product, "Oversize")}
+                </p>
+              )}
               <div className="mt-2 flex flex-wrap gap-2">
                 {fitsList.map((fit) => (
                   <button

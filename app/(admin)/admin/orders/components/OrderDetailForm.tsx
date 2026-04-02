@@ -54,6 +54,7 @@ export default function OrderDetailForm({ order }: { order: OrderDetail }) {
   return (
     <form
       onSubmit={handleSubmit}
+      suppressHydrationWarning
       className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-sm"
     >
       <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">
@@ -79,6 +80,7 @@ export default function OrderDetailForm({ order }: { order: OrderDetail }) {
             <input
               id="customer-name"
               type="text"
+              suppressHydrationWarning
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
@@ -92,6 +94,7 @@ export default function OrderDetailForm({ order }: { order: OrderDetail }) {
             <input
               id="customer-email"
               type="email"
+              suppressHydrationWarning
               value={customerEmail}
               onChange={(e) => setCustomerEmail(e.target.value)}
               className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
@@ -106,6 +109,7 @@ export default function OrderDetailForm({ order }: { order: OrderDetail }) {
           <input
             id="ship-address"
             type="text"
+            suppressHydrationWarning
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
@@ -120,6 +124,7 @@ export default function OrderDetailForm({ order }: { order: OrderDetail }) {
             <input
               id="ship-city"
               type="text"
+              suppressHydrationWarning
               value={city}
               onChange={(e) => setCity(e.target.value)}
               className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
@@ -133,6 +138,7 @@ export default function OrderDetailForm({ order }: { order: OrderDetail }) {
             <input
               id="ship-postal"
               type="text"
+              suppressHydrationWarning
               value={postalCode}
               onChange={(e) => setPostalCode(e.target.value)}
               className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
@@ -146,6 +152,7 @@ export default function OrderDetailForm({ order }: { order: OrderDetail }) {
             <input
               id="ship-country"
               type="text"
+              suppressHydrationWarning
               value={country}
               onChange={(e) => setCountry(e.target.value)}
               className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
@@ -160,6 +167,7 @@ export default function OrderDetailForm({ order }: { order: OrderDetail }) {
           <select
             id="order-status"
             value={status}
+            suppressHydrationWarning
             onChange={(e) => setStatus(e.target.value)}
             className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
           >
@@ -177,6 +185,7 @@ export default function OrderDetailForm({ order }: { order: OrderDetail }) {
           <input
             id="tracking-code"
             type="text"
+            suppressHydrationWarning
             value={trackingCode}
             onChange={(e) => setTrackingCode(e.target.value)}
             className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
@@ -191,6 +200,7 @@ export default function OrderDetailForm({ order }: { order: OrderDetail }) {
           <input
             id="tracking-carrier"
             type="text"
+            suppressHydrationWarning
             value={trackingCarrier}
             onChange={(e) => setTrackingCarrier(e.target.value)}
             className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
@@ -200,6 +210,7 @@ export default function OrderDetailForm({ order }: { order: OrderDetail }) {
         </div>
         <button
           type="submit"
+          suppressHydrationWarning
           disabled={saving}
           className="w-full rounded-md bg-[var(--foreground)] py-2.5 text-sm font-medium text-[var(--background)] hover:bg-[var(--accent)] disabled:opacity-50"
         >

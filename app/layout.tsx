@@ -33,8 +33,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${outfit.variable} ${cormorant.variable}`}>
-      <body className="min-h-screen antialiased bg-[var(--background)] text-[var(--foreground)]">
+    <html lang="en" className={`${outfit.variable} ${cormorant.variable}`} suppressHydrationWarning>
+      <body
+        suppressHydrationWarning
+        className="min-h-screen antialiased bg-[var(--background)] text-[var(--foreground)]"
+      >
         <Providers>{children}</Providers>
       </body>
     </html>

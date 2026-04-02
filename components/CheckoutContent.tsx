@@ -8,6 +8,7 @@ import { useCart } from "@/context/CartContext";
 import { createOrder } from "@/app/actions/orders";
 import { CURRENCY, SHIPPING_COUNTRY } from "@/lib/currency";
 import type { CustomerProfile } from "@/app/actions/account";
+import { cartLineUnitPrice } from "@/lib/types";
 
 type CheckoutContentProps = {
   userEmail: string;
@@ -27,7 +28,7 @@ export default function CheckoutContent({ userEmail, savedProfile }: CheckoutCon
     postalCode: savedProfile?.postal_code?.trim() || "",
     country: savedProfile?.country?.trim() || SHIPPING_COUNTRY,
   }));
-  const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const subtotal = items.reduce((sum, i) => sum + cartLineUnitPrice(i) * i.quantity, 0);
   const shipping = subtotal >= CURRENCY.freeShippingThreshold ? 0 : CURRENCY.shippingCost;
   const total = subtotal + shipping;
 
@@ -214,7 +215,7 @@ export default function CheckoutContent({ userEmail, savedProfile }: CheckoutCon
                     name: i.name,
                     size: i.size,
                     quantity: i.quantity,
-                    price: i.price,
+                    price: cartLineUnitPrice(i),
                     image: i.image,
                     ...(i.fit ? { fit: i.fit } : {}),
                     ...(i.color ? { color: i.color } : {}),
@@ -324,12 +325,17 @@ export default function CheckoutContent({ userEmail, savedProfile }: CheckoutCon
                       </p>
                     </div>
                     <p className="mt-1 text-xs text-[var(--muted)]">
-                      Unit: <span className="text-[var(--foreground)]">Rs. {item.price.toFixed(2)}</span>
+                      Unit:{" "}
+                      <span className="text-[var(--foreground)]">
+                        Rs. {cartLineUnitPrice(item).toFixed(2)}
+                      </span>
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-[var(--muted)]">Line total</p>
-                    <p className="text-sm font-medium">Rs. {(item.price * item.quantity).toFixed(2)}</p>
+                    <p className="text-sm font-medium">
+                      Rs. {(cartLineUnitPrice(item) * item.quantity).toFixed(2)}
+                    </p>
                   </div>
                 </li>
               ))}

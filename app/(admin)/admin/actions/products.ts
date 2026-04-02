@@ -16,6 +16,24 @@ function parseFitsFromForm(formData: FormData): ProductFit[] {
   return Array.from(set);
 }
 
+/** Next code like 001, 002, … from max existing all-digit `item_code` values. */
+async function nextSequentialItemCode(
+  supabase: NonNullable<ReturnType<typeof createServerClient>>
+): Promise<string> {
+  const { data, error } = await supabase.from("products").select("item_code");
+  if (error || !data?.length) return "001";
+  let max = 0;
+  for (const row of data) {
+    const code = String((row as { item_code?: string | null }).item_code ?? "").trim();
+    if (!/^\d+$/.test(code)) continue;
+    const n = parseInt(code, 10);
+    if (Number.isFinite(n) && n > max) max = n;
+  }
+  const next = max + 1;
+  const width = Math.max(3, String(next).length);
+  return String(next).padStart(width, "0");
+}
+
 function normalizeSlug(value: string): string {
   return value
     .trim()
@@ -114,13 +132,22 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
   const slug = await getUniqueProductSlug(supabase, rawSlug);
   const description = (formData.get("description") as string)?.trim() ?? "";
   const price = Number(formData.get("price")) || 0;
+  const priceOversizeRaw = formData.get("price_oversize");
+  let price_oversize: number | null = null;
+  if (priceOversizeRaw != null && String(priceOversizeRaw).trim() !== "") {
+    const n = Number(priceOversizeRaw);
+    if (Number.isFinite(n) && n >= 0) price_oversize = n;
+  }
   const compareAtPriceRaw = formData.get("compare_at_price");
   const compareAtPrice = compareAtPriceRaw ? Number(compareAtPriceRaw) : null;
   const category = (formData.get("category") as string) || "Unisex";
   const badge = (formData.get("badge") as string) || null;
   const fits = parseFitsFromForm(formData);
   const fit = fits[0] ?? null;
-  const item_code = (formData.get("item_code") as string)?.trim() || null;
+  let item_code = (formData.get("item_code") as string)?.trim() || null;
+  if (!item_code) {
+    item_code = await nextSequentialItemCode(supabase);
+  }
   const colors = formData.getAll("colors").map((c) => String(c).trim()).filter(Boolean);
   const colorImagesRaw = (formData.get("color_images") as string)?.trim() || "{}";
   let colorImages: Record<string, string> = {};
@@ -154,6 +181,7 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
       slug,
       description,
       price,
+      price_oversize,
       compare_at_price: compareAtPrice,
       category: category as "Women" | "Men" | "Unisex" | "DTF",
       badge: badge === "New" || badge === "Sale" ? badge : null,
@@ -195,6 +223,12 @@ export async function updateProduct(
   const slug = await getUniqueProductSlug(supabase, rawSlug, id);
   const description = (formData.get("description") as string)?.trim() ?? "";
   const price = Number(formData.get("price")) || 0;
+  const priceOversizeRaw = formData.get("price_oversize");
+  let price_oversize: number | null = null;
+  if (priceOversizeRaw != null && String(priceOversizeRaw).trim() !== "") {
+    const n = Number(priceOversizeRaw);
+    if (Number.isFinite(n) && n >= 0) price_oversize = n;
+  }
   const compareAtPriceRaw = formData.get("compare_at_price");
   const compareAtPrice = compareAtPriceRaw ? Number(compareAtPriceRaw) : null;
   const category = (formData.get("category") as string) || "Unisex";
@@ -231,6 +265,7 @@ export async function updateProduct(
       slug,
       description,
       price,
+      price_oversize,
       compare_at_price: compareAtPrice,
       category: category as "Women" | "Men" | "Unisex" | "DTF",
       badge: badge === "New" || badge === "Sale" ? badge : null,

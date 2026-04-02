@@ -12,6 +12,7 @@ export type ProductRow = {
   description: string;
   price: number;
   compare_at_price: number | null;
+  price_oversize?: number | null;
   category: string;
   badge: string | null;
   fit: string | null;
@@ -66,12 +67,18 @@ function rowToProduct(row: ProductRow): Product {
         )
       : {};
 
+  const price = Number(row.price);
+  const rawPo = row.price_oversize;
+  const po =
+    rawPo != null && Number.isFinite(Number(rawPo)) ? Number(rawPo) : null;
+
   return {
     id: row.id,
     name: row.name,
     slug: row.slug,
-    price: Number(row.price),
-    priceFormatted: CURRENCY.format(Number(row.price)),
+    price,
+    priceOversize: po,
+    priceFormatted: CURRENCY.format(price),
     compareAtPrice: row.compare_at_price != null ? Number(row.compare_at_price) : undefined,
     category: row.category as ProductCategory,
     image: row.image,

@@ -70,6 +70,14 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
       <div className="mt-8">
         <OrdersToolbar stats={stats} currentStatus={currentStatus} q={q} />
       </div>
+      <div className="mt-4 flex justify-end">
+        <Link
+          href="/admin/orders/new"
+          className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm font-medium text-[var(--background)] hover:bg-[var(--accent)]"
+        >
+          Create order
+        </Link>
+      </div>
 
       {orders.length === 0 ? (
         <div className="mt-8 rounded-lg border border-dashed border-[var(--border)] bg-[var(--muted-bg)]/40 px-6 py-12 text-center">

@@ -3,13 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import type { Product } from "@/lib/types";
+import { formatPriceForFit, productFitList, type Product } from "@/lib/types";
 
 const SLIDE_MS = 2000;
 
 function slideshowUrls(product: Product): string[] {
-  const raw =
+  const gallery =
     Array.isArray(product.images) && product.images.length > 0 ? product.images : [product.image];
+  const colorImages = product.colorImages ? Object.values(product.colorImages) : [];
+  const raw = [...gallery, ...colorImages];
   const seen = new Set<string>();
   const urls: string[] = [];
   for (const u of raw) {
@@ -31,16 +33,24 @@ type ProductCardProps = {
 };
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const fitsList = productFitList(product);
+  const hasDualFitPrice =
+    fitsList.includes("Regular") &&
+    fitsList.includes("Oversize") &&
+    product.priceOversize != null &&
+    Number.isFinite(Number(product.priceOversize)) &&
+    Math.abs(Number(product.priceOversize) - product.price) > 0.005;
   const slides = useMemo(() => slideshowUrls(product), [product]);
   const multi = slides.length > 1;
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
+    setIndex(0);
+  }, [product.id, slides.length]);
+
+  useEffect(() => {
     if (!multi || paused) return;
-    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      return;
-    }
     const id = window.setInterval(() => {
       setIndex((i) => (i + 1) % slides.length);
     }, SLIDE_MS);
@@ -116,8 +126,23 @@ export default function ProductCard({ product }: ProductCardProps) {
         <h3 className="font-display text-lg font-medium text-[var(--foreground)] group-hover:text-[var(--accent)]">
           {product.name}
         </h3>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-[var(--foreground)]">{product.priceFormatted}</span>
+        <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2">
+          {hasDualFitPrice ? (
+            <>
+              <span className="text-sm font-medium text-[var(--foreground)]">
+                Regular {formatPriceForFit(product, "Regular")}
+              </span>
+              <span className="text-sm font-medium text-[var(--foreground)]">
+                Oversize {formatPriceForFit(product, "Oversize")}
+              </span>
+            </>
+          ) : (
+            <span className="text-sm font-medium text-[var(--foreground)]">
+              {fitsList.length === 1
+                ? formatPriceForFit(product, fitsList[0])
+                : product.priceFormatted}
+            </span>
+          )}
           {product.compareAtPrice != null && (
             <span className="text-xs text-[var(--muted)] line-through">Rs.{product.compareAtPrice}</span>
           )}

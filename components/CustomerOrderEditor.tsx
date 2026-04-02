@@ -31,6 +31,8 @@ export default function CustomerOrderEditor({ orderId, initialItems, editable }:
   }
 
   function removeLine(index: number) {
+    const ok = window.confirm("Remove this item from your order?");
+    if (!ok) return;
     setItems((prev) => prev.filter((_, i) => i !== index));
   }
 

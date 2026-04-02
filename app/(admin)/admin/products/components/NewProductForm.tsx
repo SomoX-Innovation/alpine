@@ -15,19 +15,9 @@ export default function NewProductForm({ categories = [], colors = [] }: { categ
     const [imageUrl, setImageUrl] = useState("");
     const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
     const [name, setName] = useState("");
-    const [itemCode, setItemCode] = useState("");
     const [selectedColors, setSelectedColors] = useState<string[]>([]);
     const [colorImages, setColorImages] = useState<Record<string, string>>({});
     const [uploading, setUploading] = useState(false);
-
-    function fileNameToProductName(fileName: string): string {
-        const base = fileName.replace(/\.[^/.]+$/, "");
-        return base
-            .replace(/[_-]+/g, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-            .replace(/\b\w/g, (c) => c.toUpperCase());
-    }
 
     async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
@@ -46,12 +36,6 @@ export default function NewProductForm({ categories = [], colors = [] }: { categ
             const url = result.url;
             setImageUrl(url);
             setGalleryUrls((prev) => (prev.includes(url) ? prev : [url, ...prev]));
-        }
-        if (!itemCode.trim()) {
-            const guessedCode = fileNameToProductName(file.name)
-                .replace(/\s+/g, "-")
-                .toUpperCase();
-            if (guessedCode) setItemCode(guessedCode);
         }
     }
 
@@ -237,15 +221,16 @@ export default function NewProductForm({ categories = [], colors = [] }: { categ
 
             <div>
                 <label className="block text-sm font-medium text-[var(--foreground)]">
-                    Item Code (optional)
+                    Item code (optional override)
                 </label>
+                <p className="mt-0.5 text-xs text-[var(--muted)]">
+                    Leave blank to auto-assign the next number (001, 002, 003, …) based on existing products.
+                </p>
                 <input
                     name="item_code"
                     type="text"
-                    value={itemCode ?? ""}
-                    onChange={(e) => setItemCode(e.target.value)}
                     className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                    placeholder="e.g. TSHIRT-001"
+                    placeholder="Leave blank for auto, or enter a custom code"
                 />
             </div>
 
@@ -287,6 +272,22 @@ export default function NewProductForm({ categories = [], colors = [] }: { categ
                         className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                     />
                 </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-[var(--foreground)]">
+                    Oversize price (Rs., optional)
+                </label>
+                <p className="mt-0.5 text-xs text-[var(--muted)]">
+                    If you sell Oversize at a different price, enter it here. Leave blank to charge the regular price for Oversize too.
+                </p>
+                <input
+                    name="price_oversize"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">

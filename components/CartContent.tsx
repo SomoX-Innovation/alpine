@@ -2,14 +2,102 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { CURRENCY } from "@/lib/currency";
+import { cartLineUnitPrice, type ProductFit } from "@/lib/types";
+
+type ProductOptions = {
+  sizes: string[];
+  fits: ProductFit[];
+  colors: string[];
+  colorImages: Record<string, string>;
+  images: string[];
+  image: string;
+  price: number;
+  priceOversize: number | null;
+};
+
+type EditState = {
+  key: string;
+  productId: string;
+  oldSize: string;
+  oldFit?: ProductFit;
+  oldColor?: string;
+  size: string;
+  fit?: ProductFit;
+  color?: string;
+};
 
 export default function CartContent({ isSignedIn = false }: { isSignedIn?: boolean }) {
-  const { items, removeItem, updateQuantity } = useCart();
-  const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const { items, removeItem, updateQuantity, updateItemOptions } = useCart();
+  const [editing, setEditing] = useState<EditState | null>(null);
+  const [optionsByProduct, setOptionsByProduct] = useState<Record<string, ProductOptions>>({});
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const subtotal = items.reduce((sum, i) => sum + cartLineUnitPrice(i) * i.quantity, 0);
   const shipping = subtotal >= CURRENCY.freeShippingThreshold ? 0 : CURRENCY.shippingCost;
   const total = subtotal + shipping;
+
+  const lineKey = (item: { productId: string; size: string; fit?: string; color?: string }) =>
+    `${item.productId}-${item.size}-${item.fit ?? ""}-${item.color ?? ""}`;
+
+  async function startEdit(item: {
+    productId: string;
+    size: string;
+    fit?: ProductFit;
+    color?: string;
+  }) {
+    const key = lineKey(item);
+    setEditing({
+      key,
+      productId: item.productId,
+      oldSize: item.size,
+      oldFit: item.fit,
+      oldColor: item.color,
+      size: item.size,
+      fit: item.fit,
+      color: item.color,
+    });
+    if (optionsByProduct[item.productId]) return;
+    setLoadingOptions(true);
+    try {
+      const res = await fetch(`/api/products/${item.productId}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as ProductOptions;
+      setOptionsByProduct((prev) => ({ ...prev, [item.productId]: data }));
+    } finally {
+      setLoadingOptions(false);
+    }
+  }
+
+  function saveEdit(item: { productId: string; image: string }) {
+    if (!editing) return;
+    const opts = optionsByProduct[item.productId];
+    const nextColor = editing.color || undefined;
+    const nextImage =
+      (nextColor && opts?.colorImages?.[nextColor]) ||
+      opts?.images?.[0] ||
+      opts?.image ||
+      item.image;
+    updateItemOptions(
+      {
+        productId: editing.productId,
+        size: editing.oldSize,
+        fit: editing.oldFit,
+        color: editing.oldColor,
+      },
+      {
+        size: editing.size,
+        fit: editing.fit,
+        color: editing.color,
+        image: nextImage,
+        ...(opts
+          ? { price: opts.price, priceOversize: opts.priceOversize ?? null }
+          : {}),
+      }
+    );
+    setEditing(null);
+  }
 
   if (items.length === 0) {
     return (
@@ -43,7 +131,7 @@ export default function CartContent({ isSignedIn = false }: { isSignedIn?: boole
         <ul className="space-y-6 lg:col-span-2">
           {items.map((item) => (
             <li
-              key={`${item.productId}-${item.size}-${item.fit ?? ""}-${item.color ?? ""}`}
+              key={lineKey(item)}
               className="flex gap-4 rounded-lg border border-[var(--border)] bg-[var(--card)] p-4"
             >
               <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-md bg-[var(--muted-bg)]">
@@ -78,7 +166,10 @@ export default function CartContent({ isSignedIn = false }: { isSignedIn?: boole
                     </p>
                   ) : null}
                   <p>
-                    Unit price: <span className="text-[var(--foreground)]">Rs. {item.price.toFixed(2)}</span>
+                    Unit price:{" "}
+                    <span className="text-[var(--foreground)]">
+                      Rs. {cartLineUnitPrice(item).toFixed(2)}
+                    </span>
                   </p>
                 </div>
                 <div className="mt-2 flex items-center gap-2">
@@ -107,16 +198,104 @@ export default function CartContent({ isSignedIn = false }: { isSignedIn?: boole
                   </div>
                   <button
                     type="button"
-                    onClick={() => removeItem(item.productId, item.size, item.fit, item.color)}
+                    onClick={() => startEdit(item)}
+                    className="text-sm text-[var(--muted)] underline hover:text-[var(--foreground)]"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ok = window.confirm("Remove this item from your cart?");
+                      if (!ok) return;
+                      removeItem(item.productId, item.size, item.fit, item.color);
+                    }}
                     className="text-sm text-[var(--muted)] underline hover:text-[var(--foreground)]"
                   >
                     Remove
                   </button>
                 </div>
+                {editing?.key === lineKey(item) && (
+                  <div className="mt-3 rounded-md border border-[var(--border)] bg-[var(--background)] p-3 text-sm">
+                    {loadingOptions && !optionsByProduct[item.productId] ? (
+                      <p className="text-[var(--muted)]">Loading options...</p>
+                    ) : (
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <select
+                          value={editing.size}
+                          onChange={(e) => setEditing((s) => (s ? { ...s, size: e.target.value } : s))}
+                          className="rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1.5"
+                        >
+                          {(optionsByProduct[item.productId]?.sizes ?? [item.size]).map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                        {(optionsByProduct[item.productId]?.fits?.length ?? 0) > 0 ? (
+                          <select
+                            value={editing.fit ?? ""}
+                            onChange={(e) =>
+                              setEditing((s) =>
+                                s ? { ...s, fit: (e.target.value || undefined) as ProductFit | undefined } : s
+                              )
+                            }
+                            className="rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1.5"
+                          >
+                            {(optionsByProduct[item.productId]?.fits ?? []).map((fit) => (
+                              <option key={fit} value={fit}>
+                                {fit}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="rounded-md border border-[var(--border)] bg-[var(--muted-bg)] px-2 py-1.5 text-[var(--muted)]">
+                            No fit options
+                          </div>
+                        )}
+                        {(optionsByProduct[item.productId]?.colors?.length ?? 0) > 0 ? (
+                          <select
+                            value={editing.color ?? ""}
+                            onChange={(e) =>
+                              setEditing((s) => (s ? { ...s, color: e.target.value || undefined } : s))
+                            }
+                            className="rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1.5"
+                          >
+                            {(optionsByProduct[item.productId]?.colors ?? []).map((color) => (
+                              <option key={color} value={color}>
+                                {color}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="rounded-md border border-[var(--border)] bg-[var(--muted-bg)] px-2 py-1.5 text-[var(--muted)]">
+                            No color options
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div className="mt-2 flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => saveEdit(item)}
+                        className="rounded-md bg-[var(--foreground)] px-3 py-1.5 text-xs font-semibold text-[var(--background)]"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditing(null)}
+                        className="text-xs text-[var(--muted)] underline hover:text-[var(--foreground)]"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="text-right font-medium text-[var(--foreground)]">
                 <p className="text-xs text-[var(--muted)]">Line total</p>
-                Rs. {(item.price * item.quantity).toFixed(2)}
+                Rs. {(cartLineUnitPrice(item) * item.quantity).toFixed(2)}
               </div>
             </li>
           ))}

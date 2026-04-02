@@ -6,9 +6,79 @@ import { createClient } from "@/lib/supabase-server";
 import { sendOrderPlacementEmails } from "@/lib/mail";
 import { CURRENCY, SHIPPING_COUNTRY } from "@/lib/currency";
 import { createServiceRoleClient } from "@/lib/supabase-service";
+import { generateInvoicePdfBuffer } from "@/lib/invoice-pdf";
+import { ensureInvoiceBucket, INVOICE_BUCKET } from "@/lib/invoice-storage";
+import { priceForFit, type ProductFit } from "@/lib/types";
 
 const PRODUCT_ID_UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function rowCatalogFits(row: { fit?: unknown; fits?: unknown }): ProductFit[] {
+  const fits: ProductFit[] = [];
+  if (Array.isArray(row.fits)) {
+    for (const x of row.fits) {
+      if (x === "Regular" || x === "Oversize") fits.push(x);
+    }
+  }
+  if (fits.length === 0 && (row.fit === "Regular" || row.fit === "Oversize")) {
+    fits.push(row.fit);
+  }
+  return [...new Set(fits)];
+}
+
+/** Storefront: set each line’s unit price from DB (Regular vs Oversize). */
+async function applyCatalogPricesToLineItems(lineItems: OrderLineItem[]): Promise<OrderLineItem[]> {
+  const supabase = createServerClient();
+  if (!supabase) return lineItems;
+  const ids = [
+    ...new Set(
+      lineItems
+        .map((l) => l.productId?.trim())
+        .filter((id): id is string => Boolean(id && PRODUCT_ID_UUID.test(id)))
+    ),
+  ];
+  if (ids.length === 0) return lineItems;
+
+  const { data: rows, error } = await supabase
+    .from("products")
+    .select("id, price, price_oversize, fit, fits")
+    .in("id", ids);
+  if (error || !rows?.length) return lineItems;
+
+  const byId = new Map(rows.map((r) => [String(r.id), r]));
+
+  return lineItems.map((line) => {
+    const pid = line.productId?.trim();
+    if (!pid || !PRODUCT_ID_UUID.test(pid)) return line;
+    const row = byId.get(pid) as
+      | { id: string; price: unknown; price_oversize?: unknown; fit?: unknown; fits?: unknown }
+      | undefined;
+    if (!row) return line;
+    const fits = rowCatalogFits(row);
+    const fit: ProductFit | undefined =
+      line.fit === "Oversize" || line.fit === "Regular"
+        ? line.fit
+        : fits.length === 1
+          ? fits[0]
+          : undefined;
+    const poRaw = row.price_oversize;
+    const priceOversize =
+      poRaw != null && Number.isFinite(Number(poRaw)) ? Number(poRaw) : null;
+    const unit = priceForFit(
+      { price: Number(row.price) || 0, priceOversize },
+      fit
+    );
+    return { ...line, price: unit };
+  });
+}
+
+const MISSING_INVOICE_COLUMN_HELP =
+  "Database schema is missing orders.invoice_path. Run: alter table public.orders add column if not exists invoice_path text;";
+
+function isMissingInvoicePathColumnError(message?: string): boolean {
+  const m = String(message || "").toLowerCase();
+  return m.includes("invoice_path") && m.includes("schema cache");
+}
 
 /** Total units per product id (same product can appear on multiple lines). */
 function aggregateNeedByProduct(lineItems: OrderLineItem[]): Map<string, number> {
@@ -169,6 +239,12 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     return { error: productCheck.error };
   }
 
+  const line_items = await applyCatalogPricesToLineItems(input.line_items);
+  const subtotal = line_items.reduce((sum, i) => sum + Number(i.price) * i.quantity, 0);
+  const shipping_cost =
+    subtotal >= CURRENCY.freeShippingThreshold ? 0 : CURRENCY.shippingCost;
+  const total = subtotal + shipping_cost;
+
   const { count } = await supabase.from("orders").select("id", { count: "exact", head: true });
   const order_number = `ALP-${1001 + (count ?? 0)}`;
 
@@ -184,10 +260,10 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       customer_email,
       customer_name,
       shipping_address: input.shipping_address,
-      line_items: input.line_items,
-      subtotal: input.subtotal,
-      shipping_cost: input.shipping_cost,
-      total: input.total,
+      line_items,
+      subtotal,
+      shipping_cost,
+      total,
       payment_method: paymentMethod,
     })
     .select("id, order_number")
@@ -197,7 +273,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     return { error: error.message };
   }
 
-  const orderedOk = await applyOrderInventoryChanges(input.line_items);
+  const orderedOk = await applyOrderInventoryChanges(line_items);
   if (!orderedOk) {
     await deleteOrderById(inserted.id);
     return {
@@ -206,7 +282,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     };
   }
 
-  for (const line of input.line_items) {
+  for (const line of line_items) {
     const pid = line.productId?.trim();
     if (pid && PRODUCT_ID_UUID.test(pid)) {
       revalidatePath(`/product/${pid}`);
@@ -222,15 +298,66 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       customerEmail: customer_email,
       customerName: customer_name,
       input: {
-        line_items: input.line_items,
-        subtotal: input.subtotal,
-        shipping_cost: input.shipping_cost,
-        total: input.total,
+        line_items,
+        subtotal,
+        shipping_cost,
+        total,
         shipping_address: input.shipping_address,
       },
     });
   } catch (e) {
     console.error("[mail] sendOrderPlacementEmails:", e);
+  }
+
+  // Auto-generate invoice if service role is configured.
+  try {
+    const svc = createServiceRoleClient();
+    if (svc) {
+      const ensured = await ensureInvoiceBucket(svc);
+      if (!ensured.ok) {
+        console.error("[invoice] ensure bucket failed:", ensured.error);
+      } else {
+      const buffer = await generateInvoicePdfBuffer({
+        ...(inserted as any),
+        customer_email,
+        customer_name,
+        shipping_address: input.shipping_address,
+        line_items,
+        subtotal,
+        shipping_cost,
+        total,
+        payment_method: paymentMethod,
+        tracking_code: null,
+        tracking_carrier: null,
+        invoice_path: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as OrderDetail);
+      const safeOrderNo = String(inserted.order_number ?? "order").replace(/[^a-zA-Z0-9-_]/g, "_");
+      const path = `${safeOrderNo}.pdf`;
+      const upload = await svc.storage.from(INVOICE_BUCKET).upload(path, buffer, {
+        contentType: "application/pdf",
+        upsert: true,
+      });
+      if (!upload.error) {
+        const { error: upErr } = await svc
+          .from("orders")
+          .update({ invoice_path: path, updated_at: new Date().toISOString() })
+          .eq("id", inserted.id);
+        if (upErr) {
+          if (isMissingInvoicePathColumnError(upErr.message)) {
+            console.error("[invoice]", MISSING_INVOICE_COLUMN_HELP);
+          } else {
+            console.error("[invoice] update order failed:", upErr.message);
+          }
+        }
+      } else {
+        console.error("[invoice] upload failed:", upload.error.message);
+      }
+      }
+    }
+  } catch (e) {
+    console.error("[invoice] auto-generate failed:", e);
   }
 
   revalidatePath("/admin");
@@ -334,6 +461,7 @@ export type OrderDetail = {
   payment_method?: PaymentMethod | string;
   tracking_code: string | null;
   tracking_carrier: string | null;
+  invoice_path?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -439,6 +567,44 @@ export async function updateOrderLineItemsAdmin(
     .eq("id", orderId);
 
   if (error) return { error: error.message };
+
+  revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath("/account");
+  revalidatePath(`/account/orders/${orderId}`);
+  return { ok: true };
+}
+
+export async function generateInvoiceForOrder(orderId: string): Promise<{ ok?: true; error?: string }> {
+  const svc = createServiceRoleClient();
+  if (!svc) return { error: "SUPABASE_SERVICE_ROLE_KEY missing (required to generate invoices)." };
+  const ensured = await ensureInvoiceBucket(svc);
+  if (!ensured.ok) return { error: ensured.error };
+
+  const { data: order, error } = await svc.from("orders").select("*").eq("id", orderId).single();
+  if (error || !order) return { error: error?.message || "Order not found." };
+
+  const buffer = await generateInvoicePdfBuffer(order as OrderDetail);
+
+  const safeOrderNo = String((order as any).order_number ?? "order").replace(/[^a-zA-Z0-9-_]/g, "_");
+  const path = `${safeOrderNo}.pdf`;
+
+  const upload = await svc.storage.from(INVOICE_BUCKET).upload(path, buffer, {
+    contentType: "application/pdf",
+    upsert: true,
+  });
+  if (upload.error) return { error: upload.error.message };
+
+  const { error: upErr } = await svc
+    .from("orders")
+    .update({ invoice_path: path, updated_at: new Date().toISOString() })
+    .eq("id", orderId);
+  if (upErr) {
+    if (isMissingInvoicePathColumnError(upErr.message)) {
+      return { error: MISSING_INVOICE_COLUMN_HELP };
+    }
+    return { error: upErr.message };
+  }
 
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${orderId}`);

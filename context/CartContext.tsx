@@ -28,6 +28,13 @@ type CartContextValue = {
   addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
   removeItem: (productId: string, size: string, fit?: ProductFit, color?: string) => void;
   updateQuantity: (productId: string, size: string, quantity: number, fit?: ProductFit, color?: string) => void;
+  updateItemOptions: (
+    oldLine: Pick<CartItem, "productId" | "size" | "fit" | "color">,
+    nextLine: Pick<CartItem, "size" | "fit" | "color" | "image"> & {
+      price?: number;
+      priceOversize?: number | null;
+    }
+  ) => void;
   clearCart: () => void;
 };
 
@@ -104,6 +111,52 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [removeItem]
   );
 
+  const updateItemOptions = useCallback(
+    (
+      oldLine: Pick<CartItem, "productId" | "size" | "fit" | "color">,
+      nextLine: Pick<CartItem, "size" | "fit" | "color" | "image"> & {
+        price?: number;
+        priceOversize?: number | null;
+      }
+    ) => {
+      setItems((prev) => {
+        const fromIndex = prev.findIndex((x) => sameCartLine(x, oldLine));
+        if (fromIndex < 0) return prev;
+
+        const current = prev[fromIndex];
+        const pricingPatch =
+          nextLine.price !== undefined
+            ? {
+                price: nextLine.price,
+                priceOversize: nextLine.priceOversize ?? null,
+              }
+            : {};
+        const updated: CartItem = {
+          ...current,
+          size: nextLine.size,
+          fit: nextLine.fit,
+          color: nextLine.color,
+          image: nextLine.image,
+          ...pricingPatch,
+        };
+
+        const toIndex = prev.findIndex((x, i) => i !== fromIndex && sameCartLine(x, updated));
+        if (toIndex < 0) {
+          const next = [...prev];
+          next[fromIndex] = updated;
+          return next;
+        }
+
+        // Merge quantities if edited options match another existing line.
+        const next = [...prev];
+        next[toIndex] = { ...next[toIndex], quantity: next[toIndex].quantity + current.quantity };
+        next.splice(fromIndex, 1);
+        return next;
+      });
+    },
+    []
+  );
+
   const clearCart = useCallback(() => setItems([]), []);
 
   const count = useMemo(
@@ -118,9 +171,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       addItem,
       removeItem,
       updateQuantity,
+      updateItemOptions,
       clearCart,
     }),
-    [items, count, addItem, removeItem, updateQuantity, clearCart]
+    [items, count, addItem, removeItem, updateQuantity, updateItemOptions, clearCart]
   );
 
   return (
@@ -137,6 +191,7 @@ export function useCart() {
     addItem: () => {},
     removeItem: () => {},
     updateQuantity: () => {},
+    updateItemOptions: () => {},
     clearCart: () => {},
   };
 }

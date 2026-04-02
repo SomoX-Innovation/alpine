@@ -217,13 +217,17 @@ export default function EditProductForm({ product, categories = [], colors = [] 
 
         <div>
           <label className="block text-sm font-medium text-[var(--foreground)]">
-            Item Code (optional)
+            Item code
           </label>
+          <p className="mt-0.5 text-xs text-[var(--muted)]">
+            New products get 001, 002, … automatically when this is left empty at creation. You can edit the code here anytime.
+          </p>
           <input
             name="item_code"
             type="text"
             defaultValue={product.item_code ?? ""}
             className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            placeholder="e.g. 042 or a custom SKU"
           />
         </div>
 
@@ -267,6 +271,23 @@ export default function EditProductForm({ product, categories = [], colors = [] 
               className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[var(--foreground)]">
+            Oversize price (Rs., optional)
+          </label>
+          <p className="mt-0.5 text-xs text-[var(--muted)]">
+            If Oversize sells at a different price, enter it here. Leave blank to use the regular price for Oversize.
+          </p>
+          <input
+            name="price_oversize"
+            type="number"
+            min="0"
+            step="0.01"
+            defaultValue={product.price_oversize ?? ""}
+            className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
