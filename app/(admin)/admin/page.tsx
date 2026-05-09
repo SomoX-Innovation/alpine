@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase-server";
+import { getAllProducts } from "@/lib/products-db";
+import { stockHomeSummary } from "@/lib/admin-stock";
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const email = user?.email ?? "Admin";
+
+  const allProducts = await getAllProducts(true);
+  const stockSummary = stockHomeSummary(allProducts);
 
   let productCount = 0;
   let orderCount = 0;
@@ -44,7 +49,7 @@ export default async function AdminDashboardPage() {
         Logged in as {email}
       </p>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
           <p className="text-sm text-[var(--muted)]">Products</p>
           <p className="mt-1 text-2xl font-semibold text-[var(--foreground)]">
@@ -55,6 +60,24 @@ export default async function AdminDashboardPage() {
             className="mt-2 block text-sm text-[var(--accent)] hover:underline"
           >
             Manage →
+          </Link>
+        </div>
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
+          <p className="text-sm text-[var(--muted)]">Stock</p>
+          <p className="mt-1 text-2xl font-semibold text-[var(--foreground)]">
+            {stockSummary.totalUnits.toLocaleString()}
+          </p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            {stockSummary.trackedProducts} tracking
+            {stockSummary.needAttention > 0
+              ? ` · ${stockSummary.needAttention} need attention`
+              : ""}
+          </p>
+          <Link
+            href="/admin/stock"
+            className="mt-2 block text-sm text-[var(--accent)] hover:underline"
+          >
+            Stock dashboard →
           </Link>
         </div>
         <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">

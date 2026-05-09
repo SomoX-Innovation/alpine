@@ -1,4 +1,4 @@
-import type { Product, ProductCategory, ProductFit } from "@/lib/types";
+import { parseVariantStockRecord, type Product, type ProductCategory, type ProductFit } from "@/lib/types";
 import { createServerClient } from "@/lib/supabase";
 import { CURRENCY } from "@/lib/currency";
 
@@ -22,6 +22,9 @@ export type ProductRow = {
   color_images: Record<string, string> | null;
   sizes: string[];
   quantity?: number;
+  /** When true, `quantity` is enforced on checkout */
+  track_stock?: boolean;
+  variant_stock?: unknown;
   ordered_quantity?: number;
   image: string;
   images: string[];
@@ -92,6 +95,9 @@ function rowToProduct(row: ProductRow): Product {
     colors: Array.isArray(row.colors) ? row.colors : [],
     colorImages,
     orderedQuantity: parseOrderedQuantity(row.ordered_quantity),
+    trackStock: row.track_stock === true,
+    stockQuantity: parseOrderedQuantity(row.quantity),
+    variantStock: parseVariantStockRecord(row.variant_stock),
   };
 }
 

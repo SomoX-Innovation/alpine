@@ -10,6 +10,10 @@ import {
 } from "react";
 import type { CartItem, ProductFit } from "@/lib/types";
 
+function cartLineCap(item: Pick<CartItem, "maxQuantity">): number {
+  return item.maxQuantity ?? 99;
+}
+
 function sameCartLine(
   a: Pick<CartItem, "productId" | "size" | "fit" | "color">,
   b: Pick<CartItem, "productId" | "size" | "fit" | "color">
@@ -33,6 +37,7 @@ type CartContextValue = {
     nextLine: Pick<CartItem, "size" | "fit" | "color" | "image"> & {
       price?: number;
       priceOversize?: number | null;
+      maxQuantity?: number;
     }
   ) => void;
   clearCart: () => void;
@@ -72,14 +77,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = useCallback(
     (item: Omit<CartItem, "quantity"> & { quantity?: number }) => {
-      const qty = item.quantity ?? 1;
+      const requested = item.quantity ?? 1;
       setItems((prev) => {
         const i = prev.findIndex((x) => sameCartLine(x, item));
         if (i >= 0) {
           const next = [...prev];
-          next[i] = { ...next[i], quantity: next[i].quantity + qty };
+          const cap = cartLineCap(next[i]);
+          next[i] = {
+            ...next[i],
+            quantity: Math.min(cap, next[i].quantity + requested),
+          };
           return next;
         }
+        const cap = cartLineCap(item);
+        if (cap < 1) return prev;
+        const qty = Math.min(cap, Math.max(1, requested));
         return [...prev, { ...item, quantity: qty }];
       });
     },
@@ -101,11 +113,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       setItems((prev) =>
-        prev.map((x) =>
-          sameCartLine(x, { productId, size, fit, color })
-            ? { ...x, quantity }
-            : x
-        )
+        prev.map((x) => {
+          if (!sameCartLine(x, { productId, size, fit, color })) return x;
+          const cap = cartLineCap(x);
+          const q = Math.min(cap, Math.max(1, Math.floor(quantity)));
+          return { ...x, quantity: q };
+        })
       );
     },
     [removeItem]
@@ -117,6 +130,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       nextLine: Pick<CartItem, "size" | "fit" | "color" | "image"> & {
         price?: number;
         priceOversize?: number | null;
+        maxQuantity?: number;
       }
     ) => {
       setItems((prev) => {
@@ -131,14 +145,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 priceOversize: nextLine.priceOversize ?? null,
               }
             : {};
-        const updated: CartItem = {
+        const maxPatch =
+          nextLine.maxQuantity !== undefined ? { maxQuantity: nextLine.maxQuantity } : {};
+        let updated: CartItem = {
           ...current,
           size: nextLine.size,
           fit: nextLine.fit,
           color: nextLine.color,
           image: nextLine.image,
           ...pricingPatch,
+          ...maxPatch,
         };
+        const cap = cartLineCap(updated);
+        if (updated.quantity > cap) {
+          updated = { ...updated, quantity: cap };
+        }
 
         const toIndex = prev.findIndex((x, i) => i !== fromIndex && sameCartLine(x, updated));
         if (toIndex < 0) {
@@ -148,8 +169,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Merge quantities if edited options match another existing line.
+        const mergeCap = Math.min(cartLineCap(prev[toIndex]), cartLineCap(updated));
         const next = [...prev];
-        next[toIndex] = { ...next[toIndex], quantity: next[toIndex].quantity + current.quantity };
+        next[toIndex] = {
+          ...next[toIndex],
+          quantity: Math.min(mergeCap, next[toIndex].quantity + updated.quantity),
+        };
         next.splice(fromIndex, 1);
         return next;
       });

@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { updateProduct, deleteProduct, uploadProductImage } from "../../actions/products";
 import type { ProductRow } from "@/lib/products-db";
 import type { CategoryRow } from "@/lib/categories-db";
 import type { ColorRow } from "@/lib/colors-db";
-import type { ProductFit } from "@/lib/types";
+import { parseVariantStockRecord, type ProductFit } from "@/lib/types";
+import VariantStockEditor from "./VariantStockEditor";
 
 function initialFitsFromRow(p: ProductRow): ProductFit[] {
   const raw = p.fits;
@@ -44,6 +45,23 @@ export default function EditProductForm({ product, categories = [], colors = [] 
       : {}
   );
   const [uploading, setUploading] = useState(false);
+  const [trackStock, setTrackStock] = useState(product.track_stock === true);
+  const [sizesStr, setSizesStr] = useState(() =>
+    Array.isArray(product.sizes) ? product.sizes.join(", ") : "S,M,L,XL,XXL"
+  );
+  const variantStockKey =
+    typeof product.variant_stock === "object" && product.variant_stock !== null
+      ? JSON.stringify(product.variant_stock)
+      : "";
+  const initialVariantStock = useMemo(
+    () => parseVariantStockRecord(product.variant_stock),
+    [product.id, variantStockKey]
+  );
+  const parsedSizes = useMemo(
+    () => sizesStr.split(",").map((s) => s.trim()).filter(Boolean),
+    [sizesStr]
+  );
+  const colorsForVariantStock = selectedColors.length > 0 ? selectedColors : [];
 
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -106,6 +124,12 @@ export default function EditProductForm({ product, categories = [], colors = [] 
     formData.set("color_images", JSON.stringify(colorImages));
     formData.set("image", imageUrl);
     formData.set("images_json", JSON.stringify(galleryUrls));
+    formData.set("sizes", sizesStr);
+    if (trackStock) {
+      formData.set("track_stock", "on");
+    } else {
+      formData.delete("track_stock");
+    }
     const result = await updateProduct(product.id, formData);
     if (result.error) {
       setError(result.error);
@@ -406,11 +430,61 @@ export default function EditProductForm({ product, categories = [], colors = [] 
             Sizes (comma-separated)
           </label>
           <input
-            name="sizes"
             type="text"
-            defaultValue={Array.isArray(product.sizes) ? product.sizes.join(", ") : "S,M,L,XL,XXL"}
+            value={sizesStr}
+            onChange={(e) => setSizesStr(e.target.value)}
             className="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
           />
+        </div>
+
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)]/30 p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-[var(--foreground)]">Stock</h3>
+          <p className="text-xs text-[var(--muted)]">
+            Use <strong className="text-[var(--foreground)]/90">Quick set</strong> to apply one qty to all Regular rows, all Oversize rows, or all rows for a color;
+            then tweak the table per size if needed.
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="track_stock_edit"
+              checked={trackStock}
+              onChange={(e) => setTrackStock(e.target.checked)}
+              className="rounded border-[var(--border)]"
+            />
+            <label htmlFor="track_stock_edit" className="text-sm text-[var(--foreground)]">
+              Track stock (limit sales by units in stock)
+            </label>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--foreground)]" htmlFor="quantity_edit">
+              Pooled units (legacy)
+            </label>
+            <input
+              id="quantity_edit"
+              name="quantity"
+              type="number"
+              min={0}
+              step={1}
+              defaultValue={product.quantity ?? 0}
+              className="mt-1 w-full max-w-xs rounded-md border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            />
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              If every variant row is zero and the map is empty, checkout uses this pooled count instead.
+            </p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-[var(--foreground)]">Variant stock</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Per fit × size × color. Quick set by fit or color, then adjust individual rows.
+            </p>
+            <VariantStockEditor
+              fits={selectedFits}
+              sizes={parsedSizes}
+              colors={colorsForVariantStock}
+              initialJson={initialVariantStock}
+              enabled={trackStock}
+            />
+          </div>
         </div>
 
         <div>

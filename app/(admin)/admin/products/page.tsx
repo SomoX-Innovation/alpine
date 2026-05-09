@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getAllProducts } from "@/lib/products-db";
+import { parseVariantStockRecord } from "@/lib/types";
 
 export default async function AdminProductsPage() {
   const products = await getAllProducts(true);
@@ -44,6 +45,9 @@ export default async function AdminProductsPage() {
                   Price
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
+                  Stock
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
                   Ordered
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
@@ -58,7 +62,9 @@ export default async function AdminProductsPage() {
               </tr>
             </thead>
             <tbody>
-              {products.map((p) => (
+              {products.map((p) => {
+                const variantKeyCount = Object.keys(parseVariantStockRecord(p.variant_stock)).length;
+                return (
                 <tr
                   key={p.id}
                   className="border-b border-[var(--border)] last:border-0"
@@ -83,6 +89,17 @@ export default async function AdminProductsPage() {
                     Rs. {Number(p.price).toFixed(2)}
                   </td>
                   <td className="px-4 py-3 text-[var(--muted)]">
+                    {p.track_stock ? (
+                      variantKeyCount > 0 ? (
+                        <span className="text-[var(--foreground)]">By variant ({variantKeyCount})</span>
+                      ) : (
+                        <span className="text-[var(--foreground)]">{p.quantity ?? 0}</span>
+                      )
+                    ) : (
+                      <span className="text-[var(--muted)]">Not tracked</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-[var(--muted)]">
                     {p.ordered_quantity ?? 0}
                   </td>
                   <td className="px-4 py-3 text-[var(--muted)]">
@@ -100,7 +117,8 @@ export default async function AdminProductsPage() {
                     </Link>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

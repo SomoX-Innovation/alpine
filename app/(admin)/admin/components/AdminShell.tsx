@@ -52,6 +52,15 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             Products
           </Link>
           <Link
+            href="/admin/stock"
+            className={`block rounded-md px-3 py-2 text-sm font-medium ${pathname?.startsWith("/admin/stock")
+              ? "bg-[var(--muted-bg)] text-[var(--foreground)]"
+              : "text-[var(--muted)] hover:bg-[var(--muted-bg)] hover:text-[var(--foreground)]"
+              }`}
+          >
+            Stock
+          </Link>
+          <Link
             href="/admin/dtf"
             className={`block rounded-md px-3 py-2 text-sm font-medium ${pathname?.startsWith("/admin/dtf")
               ? "bg-[var(--muted-bg)] text-[var(--foreground)]"

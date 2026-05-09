@@ -22,5 +22,8 @@ export async function GET(
     image: product.image,
     price: product.price,
     priceOversize: product.priceOversize ?? null,
+    trackStock: product.trackStock === true,
+    stockQuantity: product.stockQuantity ?? 0,
+    variantStock: product.variantStock ?? {},
   });
 }

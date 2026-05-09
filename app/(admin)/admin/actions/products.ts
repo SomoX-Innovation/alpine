@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerClient } from "@/lib/supabase";
-import type { ProductFit } from "@/lib/types";
+import { parseVariantStockRecord, type ProductFit } from "@/lib/types";
 import { convertUploadToWebp } from "@/lib/image-upload";
 
 const BUCKET = "product-images";
@@ -69,6 +69,16 @@ function parseImagesFromForm(formData: FormData, mainImage: string): string[] {
     }
   }
   return out;
+}
+
+function parseVariantStockFromForm(formData: FormData): Record<string, number> {
+  const raw = (formData.get("variant_stock_json") as string)?.trim() || "{}";
+  try {
+    const parsed = parseVariantStockRecord(JSON.parse(raw));
+    return Object.fromEntries(Object.entries(parsed).filter(([, v]) => v > 0));
+  } catch {
+    return {};
+  }
 }
 
 async function getUniqueProductSlug(
@@ -166,6 +176,10 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
   const sizesStr = (formData.get("sizes") as string)?.trim() || "S,M,L,XL,XXL";
   const sizes = sizesStr.split(",").map((s) => s.trim()).filter(Boolean);
   const ordered_quantity = Math.max(0, Math.floor(Number(formData.get("ordered_quantity")) || 0));
+  const track_stock =
+    formData.get("track_stock") === "on" || formData.get("track_stock") === "true";
+  const quantity = Math.max(0, Math.floor(Number(formData.get("quantity")) || 0));
+  const variant_stock = track_stock ? parseVariantStockFromForm(formData) : {};
   const image = (formData.get("image") as string)?.trim() || "";
   const images = parseImagesFromForm(formData, image);
   const published = formData.get("published") === "on" || formData.get("published") === "true";
@@ -191,6 +205,9 @@ export async function createProduct(formData: FormData): Promise<{ id?: string; 
       colors,
       color_images: colorImages,
       sizes,
+      track_stock,
+      quantity,
+      variant_stock,
       ordered_quantity,
       image: image || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
       images,
@@ -254,6 +271,10 @@ export async function updateProduct(
   const sizesStr = (formData.get("sizes") as string)?.trim() || "S,M,L,XL,XXL";
   const sizes = sizesStr.split(",").map((s) => s.trim()).filter(Boolean);
   const ordered_quantity = Math.max(0, Math.floor(Number(formData.get("ordered_quantity")) || 0));
+  const track_stock =
+    formData.get("track_stock") === "on" || formData.get("track_stock") === "true";
+  const quantity = Math.max(0, Math.floor(Number(formData.get("quantity")) || 0));
+  const variant_stock = track_stock ? parseVariantStockFromForm(formData) : {};
   const image = (formData.get("image") as string)?.trim() || "";
   const images = parseImagesFromForm(formData, image);
   const published = formData.get("published") === "on" || formData.get("published") === "true";
@@ -275,6 +296,9 @@ export async function updateProduct(
       colors,
       color_images: colorImages,
       sizes,
+      track_stock,
+      quantity,
+      variant_stock,
       ordered_quantity,
       image: image || undefined,
       images,

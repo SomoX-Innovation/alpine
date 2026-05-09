@@ -8,7 +8,12 @@ import { CURRENCY, SHIPPING_COUNTRY } from "@/lib/currency";
 import { createServiceRoleClient } from "@/lib/supabase-service";
 import { generateInvoicePdfBuffer } from "@/lib/invoice-pdf";
 import { ensureInvoiceBucket, INVOICE_BUCKET } from "@/lib/invoice-storage";
-import { priceForFit, type ProductFit } from "@/lib/types";
+import {
+  aggregateNeedByProduct,
+  aggregateNeedByVariant,
+  applyOrderInventoryFromLines,
+} from "@/lib/order-inventory";
+import { getVariantStockQuantity, parseVariantStockRecord, priceForFit, type ProductFit } from "@/lib/types";
 
 const PRODUCT_ID_UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -80,20 +85,7 @@ function isMissingInvoicePathColumnError(message?: string): boolean {
   return m.includes("invoice_path") && m.includes("schema cache");
 }
 
-/** Total units per product id (same product can appear on multiple lines). */
-function aggregateNeedByProduct(lineItems: OrderLineItem[]): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const line of lineItems) {
-    const pid = line.productId?.trim();
-    if (!pid || !PRODUCT_ID_UUID.test(pid)) continue;
-    const q = Math.max(0, Math.floor(Number(line.quantity)) || 0);
-    if (q <= 0) continue;
-    map.set(pid, (map.get(pid) ?? 0) + q);
-  }
-  return map;
-}
-
-/** Ensures cart lines reference published products (no inventory checks). */
+/** Ensures cart lines reference published products, fits, and stock when tracked. */
 async function validateProductsBeforeOrder(
   lineItems: OrderLineItem[]
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -108,7 +100,7 @@ async function validateProductsBeforeOrder(
   const ids = [...need.keys()];
   const { data: rows, error } = await supabase
     .from("products")
-    .select("id, name, published, fit, fits")
+    .select("id, name, published, fit, fits, track_stock, quantity, variant_stock")
     .in("id", ids);
   if (error) {
     return { ok: false, error: error.message };
@@ -118,6 +110,34 @@ async function validateProductsBeforeOrder(
     const row = byId.get(pid);
     if (!row || !(row as { published?: boolean }).published) {
       return { ok: false, error: "A product in your cart is no longer available." };
+    }
+  }
+
+  for (const [, v] of aggregateNeedByVariant(lineItems)) {
+    const row = byId.get(v.productId) as
+      | {
+          name?: string;
+          track_stock?: boolean;
+          quantity?: unknown;
+          variant_stock?: unknown;
+        }
+      | undefined;
+    if (!row || row.track_stock !== true) continue;
+    const variantMap = parseVariantStockRecord(row.variant_stock);
+    const avail = getVariantStockQuantity(
+      {
+        trackStock: true,
+        stockQuantity: Math.max(0, Math.floor(Number(row.quantity) || 0)),
+        variantStock: variantMap,
+      },
+      { fit: v.fit || undefined, size: v.size, color: v.color || undefined }
+    );
+    if (avail < v.qty) {
+      const label = [v.fit || "—", v.size || "—", v.color || "—"].join(" · ");
+      return {
+        ok: false,
+        error: `Not enough stock for ${row.name ?? "an item"} (${label}). Only ${avail} available (you need ${v.qty}).`,
+      };
     }
   }
 
@@ -141,33 +161,6 @@ async function validateProductsBeforeOrder(
     }
   }
   return { ok: true };
-}
-
-/**
- * Increments `ordered_quantity` per product via RPC (requires service role).
- * Returns false if RPC failed (caller should delete the order row).
- */
-async function applyOrderInventoryChanges(lineItems: OrderLineItem[]): Promise<boolean> {
-  const svc = createServiceRoleClient();
-  if (!svc) {
-    console.warn(
-      "[orders] SUPABASE_SERVICE_ROLE_KEY missing — ordered counts not updated. Add it for production."
-    );
-    return true;
-  }
-  const need = aggregateNeedByProduct(lineItems);
-  const payload = [...need.entries()].map(([product_id, qty]) => ({ product_id, qty }));
-  if (payload.length === 0) {
-    return false;
-  }
-  const { error } = await svc.rpc("apply_order_inventory_changes", {
-    p_lines: payload,
-  });
-  if (error) {
-    console.error("[orders] apply_order_inventory_changes", error.message);
-    return false;
-  }
-  return true;
 }
 
 async function deleteOrderById(orderId: string): Promise<void> {
@@ -273,12 +266,13 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     return { error: error.message };
   }
 
-  const orderedOk = await applyOrderInventoryChanges(line_items);
-  if (!orderedOk) {
+  const inv = await applyOrderInventoryFromLines(line_items);
+  if (!inv.ok) {
     await deleteOrderById(inserted.id);
     return {
-      error:
-        "We couldn’t finalize your order. Please refresh the page and try again.",
+      error: inv.insufficientStock
+        ? "Not enough stock for an item in your cart. Update quantities and try again."
+        : "We couldn’t finalize your order. Please refresh the page and try again.",
     };
   }
 

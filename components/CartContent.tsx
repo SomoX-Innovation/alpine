@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { CURRENCY } from "@/lib/currency";
-import { cartLineUnitPrice, type ProductFit } from "@/lib/types";
+import { cartLineUnitPrice, effectiveMaxCartQuantityForLine, type ProductFit } from "@/lib/types";
 
 type ProductOptions = {
   sizes: string[];
@@ -16,6 +16,9 @@ type ProductOptions = {
   image: string;
   price: number;
   priceOversize: number | null;
+  trackStock: boolean;
+  stockQuantity: number;
+  variantStock: Record<string, number>;
 };
 
 type EditState = {
@@ -92,7 +95,22 @@ export default function CartContent({ isSignedIn = false }: { isSignedIn?: boole
         color: editing.color,
         image: nextImage,
         ...(opts
-          ? { price: opts.price, priceOversize: opts.priceOversize ?? null }
+          ? {
+              price: opts.price,
+              priceOversize: opts.priceOversize ?? null,
+              maxQuantity: effectiveMaxCartQuantityForLine(
+                {
+                  trackStock: opts.trackStock,
+                  stockQuantity: opts.stockQuantity,
+                  variantStock: opts.variantStock ?? {},
+                },
+                {
+                  fit: editing.fit,
+                  size: editing.size,
+                  color: editing.color,
+                }
+              ),
+            }
           : {}),
       }
     );

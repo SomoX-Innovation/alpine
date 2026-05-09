@@ -58,6 +58,8 @@ create table if not exists public.products (
   item_code text null,
   sizes jsonb not null default '["S","M","L","XL","XXL"]'::jsonb,
   quantity integer not null default 0 check (quantity >= 0),
+  track_stock boolean not null default false,
+  variant_stock jsonb not null default '{}'::jsonb,
   ordered_quantity integer not null default 0 check (ordered_quantity >= 0),
   image text not null default '',
   images jsonb not null default '[]'::jsonb,
@@ -81,6 +83,8 @@ alter table public.products add column if not exists ordered_quantity integer no
 alter table public.products add column if not exists item_code text;
 alter table public.products add column if not exists price_oversize numeric check (price_oversize is null or price_oversize >= 0);
 alter table public.products add column if not exists quantity integer not null default 0;
+alter table public.products add column if not exists track_stock boolean not null default false;
+alter table public.products add column if not exists variant_stock jsonb not null default '{}'::jsonb;
 
 -- Legacy: migrate old `color` text column into `colors` jsonb if it still exists
 do $$
@@ -166,7 +170,7 @@ create index if not exists customized_orders_created_at on public.customized_ord
 create index if not exists customized_orders_email on public.customized_orders (customer_email);
 
 -- -----------------------------------------------------------------------------
--- Ordered counts RPC (checkout: increment ordered_quantity only — no stock field)
+-- Inventory RPC: ordered_quantity + per line; variant_stock or legacy quantity when track_stock.
 -- -----------------------------------------------------------------------------
 drop function if exists public.increment_product_ordered_quantity (uuid, int);
 
@@ -181,6 +185,15 @@ declare
   n int;
   pid uuid;
   q int;
+  p_track boolean;
+  p_qty int;
+  p_vs jsonb;
+  v_key text;
+  v_fit text;
+  v_size text;
+  v_color text;
+  cur int;
+  use_variants boolean;
 begin
   if p_lines is null or jsonb_typeof(p_lines) <> 'array' then
     raise exception 'invalid_inventory_payload';
@@ -192,14 +205,73 @@ begin
     if q <= 0 then
       continue;
     end if;
-    update public.products
-    set
-      ordered_quantity = ordered_quantity + q,
-      updated_at = now()
-    where id = pid;
-    get diagnostics n = row_count;
-    if n <> 1 then
+
+    select p.track_stock, p.quantity, coalesce(p.variant_stock, '{}'::jsonb)
+    into p_track, p_qty, p_vs
+    from public.products p
+    where p.id = pid
+    for update;
+
+    if not found then
       raise exception 'product_not_found';
+    end if;
+
+    if not p_track then
+      update public.products
+      set ordered_quantity = ordered_quantity + q, updated_at = now()
+      where id = pid;
+      get diagnostics n = row_count;
+      if n <> 1 then
+        raise exception 'product_not_found';
+      end if;
+      continue;
+    end if;
+
+    use_variants := p_vs is not null and p_vs <> '{}'::jsonb;
+
+    if use_variants then
+      v_fit := case
+        when coalesce(trim(el->>'fit'), '') in ('Regular', 'Oversize') then trim(el->>'fit')
+        else '_'
+      end;
+      v_size := case
+        when coalesce(trim(el->>'size'), '') = '' then '_'
+        else trim(el->>'size')
+      end;
+      v_color := case
+        when coalesce(trim(el->>'color'), '') = '' then '_'
+        else trim(el->>'color')
+      end;
+      v_key := v_fit || '|' || v_size || '|' || v_color;
+      cur := coalesce((p_vs->>v_key)::int, 0);
+      if cur < q then
+        raise exception 'insufficient_stock';
+      end if;
+      update public.products
+      set
+        variant_stock = p_vs || jsonb_build_object(v_key, cur - q),
+        ordered_quantity = ordered_quantity + q,
+        updated_at = now()
+      where id = pid;
+      get diagnostics n = row_count;
+      if n <> 1 then
+        raise exception 'product_not_found';
+      end if;
+    else
+      if p_qty < q then
+        raise exception 'insufficient_stock';
+      end if;
+      update public.products
+      set
+        quantity = quantity - q,
+        ordered_quantity = ordered_quantity + q,
+        updated_at = now()
+      where id = pid
+        and quantity >= q;
+      get diagnostics n = row_count;
+      if n <> 1 then
+        raise exception 'insufficient_stock';
+      end if;
     end if;
   end loop;
 end;

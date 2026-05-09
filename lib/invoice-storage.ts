@@ -1,9 +1,16 @@
+/** Matches Supabase `storage.createBucket` so service-role clients type-check. */
+type CreateBucketOptions = {
+  public: boolean;
+  fileSizeLimit?: string | number | null;
+  allowedMimeTypes?: string[] | null;
+};
+
 type InvoiceStorageClient = {
   storage: {
     getBucket: (id: string) => Promise<{ data: unknown; error: { message: string } | null }>;
     createBucket: (
       id: string,
-      options?: { public?: boolean; fileSizeLimit?: string; allowedMimeTypes?: string[] }
+      options?: CreateBucketOptions
     ) => Promise<{ data: unknown; error: { message: string } | null }>;
   };
 };

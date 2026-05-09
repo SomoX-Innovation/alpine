@@ -7,6 +7,7 @@ import { sendOrderPlacementEmails } from "@/lib/mail";
 import { generateInvoicePdfBuffer } from "@/lib/invoice-pdf";
 import { ensureInvoiceBucket, INVOICE_BUCKET } from "@/lib/invoice-storage";
 import type { OrderLineItem, OrderDetail } from "@/app/actions/orders";
+import { applyOrderInventoryFromLines } from "@/lib/order-inventory";
 
 const MISSING_INVOICE_COLUMN_HELP =
   "Database schema is missing orders.invoice_path. Run: alter table public.orders add column if not exists invoice_path text;";
@@ -82,6 +83,16 @@ export async function createOrderAdmin(input: {
     .single();
 
   if (error || !inserted) return { error: error?.message || "Failed to create order." };
+
+  const inv = await applyOrderInventoryFromLines(line_items);
+  if (!inv.ok) {
+    await svc.from("orders").delete().eq("id", inserted.id);
+    return {
+      error: inv.insufficientStock
+        ? "Not enough stock for a product on this order. Reduce quantities or restock."
+        : inv.message || "Could not update inventory for this order.",
+    };
+  }
 
   // Emails (if SMTP configured)
   try {

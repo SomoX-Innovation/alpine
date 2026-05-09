@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { CURRENCY } from "@/lib/currency";
 import {
+  effectiveMaxCartQuantityForLine,
   formatPriceForFit,
+  isProductVariantOutOfStock,
   productFitList,
   type Product,
   type ProductFit,
@@ -21,8 +23,40 @@ export default function ProductDetail({ product }: ProductDetailProps) {
   );
   const [selectedSize, setSelectedSize] = useState<string>(product.sizes[0] ?? "One Size");
   const [selectedColor, setSelectedColor] = useState<string>(product.colors?.[0] ?? "");
-  const maxQty = 99;
   const [quantity, setQuantity] = useState(1);
+  const displayFit: ProductFit | null = useMemo(() => {
+    if (fitsList.length === 0) return null;
+    if (fitsList.length === 1) return fitsList[0];
+    return selectedFit;
+  }, [fitsList, selectedFit]);
+  const lineColor =
+    product.colors && product.colors.length > 0 ? selectedColor || undefined : undefined;
+  const maxQty = useMemo(
+    () =>
+      effectiveMaxCartQuantityForLine(product, {
+        fit: displayFit ?? undefined,
+        size: selectedSize,
+        color: lineColor,
+      }),
+    [product, displayFit, selectedSize, lineColor]
+  );
+  const outOfStock = useMemo(
+    () =>
+      isProductVariantOutOfStock(product, {
+        fit: displayFit ?? undefined,
+        size: selectedSize,
+        color: lineColor,
+      }),
+    [product, displayFit, selectedSize, lineColor]
+  );
+
+  useEffect(() => {
+    setQuantity(1);
+  }, [product.id, product.trackStock, product.stockQuantity, product.variantStock, displayFit, selectedSize, lineColor]);
+
+  useEffect(() => {
+    setQuantity((q) => Math.min(maxQty, Math.max(1, q)));
+  }, [maxQty]);
   const [added, setAdded] = useState(false);
   const [isZooming, setIsZooming] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
@@ -33,11 +67,6 @@ export default function ProductDetail({ product }: ProductDetailProps) {
     product.priceOversize != null &&
     Number.isFinite(Number(product.priceOversize)) &&
     Math.abs(Number(product.priceOversize) - product.price) > 0.005;
-  const displayFit: ProductFit | null = useMemo(() => {
-    if (fitsList.length === 0) return null;
-    if (fitsList.length === 1) return fitsList[0];
-    return selectedFit;
-  }, [fitsList, selectedFit]);
   const displayPriceFormatted = useMemo(() => {
     if (hasDualFitPrice && displayFit === null) {
       return `${formatPriceForFit(product, "Regular")} · ${formatPriceForFit(product, "Oversize")}`;
@@ -50,9 +79,10 @@ export default function ProductDetail({ product }: ProductDetailProps) {
   const mainImage = colorImage || images[0] || product.image;
   const useUnoptimized = mainImage.includes("/storage/v1/object/public/");
   const fitRequired = fitsList.length > 1;
-  const canAddToCart = !fitRequired || selectedFit !== null;
+  const canAddToCart = (!fitRequired || selectedFit !== null) && !outOfStock;
 
   function handleAddToCart() {
+    const qty = Math.min(quantity, maxQty);
     addItem({
       productId: product.id,
       name: product.name,
@@ -60,8 +90,9 @@ export default function ProductDetail({ product }: ProductDetailProps) {
       priceOversize: product.priceOversize ?? null,
       image: mainImage,
       size: selectedSize,
-      quantity,
-      ...(selectedFit ? { fit: selectedFit } : {}),
+      quantity: qty,
+      ...(product.trackStock ? { maxQuantity: maxQty } : {}),
+      ...(displayFit ? { fit: displayFit } : {}),
       ...(product.colors && product.colors.length > 0 && selectedColor
         ? { color: selectedColor }
         : {}),
@@ -262,7 +293,8 @@ export default function ProductDetail({ product }: ProductDetailProps) {
               <button
                 type="button"
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                className="flex h-10 w-10 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
+                disabled={outOfStock}
+                className="flex h-10 w-10 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)] disabled:opacity-40"
                 aria-label="Decrease quantity"
               >
                 −
@@ -273,12 +305,16 @@ export default function ProductDetail({ product }: ProductDetailProps) {
               <button
                 type="button"
                 onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
-                className="flex h-10 w-10 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)]"
+                disabled={outOfStock || quantity >= maxQty}
+                className="flex h-10 w-10 items-center justify-center text-[var(--foreground)] hover:bg-[var(--muted-bg)] disabled:opacity-40"
                 aria-label="Increase quantity"
               >
                 +
               </button>
             </div>
+            {product.trackStock && !outOfStock && (
+              <p className="mt-1 text-xs text-[var(--muted)]">{maxQty} available</p>
+            )}
           </div>
 
           {/* Add to cart */}
@@ -289,7 +325,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
               disabled={!canAddToCart}
               className="flex-1 rounded-md bg-[var(--foreground)] px-6 py-3.5 text-sm font-semibold text-[var(--background)] transition-colors hover:bg-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {added ? "Added to cart" : "Add to cart"}
+              {outOfStock ? "Out of stock" : added ? "Added to cart" : "Add to cart"}
             </button>
             <Link
               href="/cart"
@@ -298,7 +334,12 @@ export default function ProductDetail({ product }: ProductDetailProps) {
               View cart
             </Link>
           </div>
-          {fitRequired && !selectedFit && (
+          {outOfStock && (
+            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+              This product is currently out of stock.
+            </p>
+          )}
+          {fitRequired && !selectedFit && !outOfStock && (
             <p className="mt-2 text-xs text-red-500">Please select a fit (Regular or Oversize) before adding to cart.</p>
           )}
 

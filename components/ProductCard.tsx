@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { formatPriceForFit, productFitList, type Product } from "@/lib/types";
+import { formatPriceForFit, isProductOutOfStock, productFitList, type Product } from "@/lib/types";
 
 const SLIDE_MS = 2000;
 
@@ -115,6 +115,11 @@ export default function ProductCard({ product }: ProductCardProps) {
         {product.compareAtPrice != null && product.badge !== "Sale" && (
           <span className="absolute right-3 top-3 z-[1] rounded bg-[var(--foreground)] px-2.5 py-1 text-xs font-semibold text-[var(--background)]">
             Sale
+          </span>
+        )}
+        {isProductOutOfStock(product) && (
+          <span className="absolute bottom-3 left-3 z-[2] rounded-md bg-[var(--foreground)]/90 px-2.5 py-1 text-xs font-semibold text-[var(--background)]">
+            Out of stock
           </span>
         )}
       </div>
